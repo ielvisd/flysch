@@ -1,21 +1,24 @@
 <template>
-  <div class="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900 py-12 px-4 sm:px-6 lg:px-8">
+  <div class="min-h-screen flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8 bg-gray-50" style="padding-top: 100px;">
     <div class="max-w-md w-full space-y-8">
       <div class="text-center">
         <div class="flex justify-center mb-4">
-          <div class="w-16 h-16 bg-gradient-to-br from-blue-600 to-blue-800 rounded-2xl flex items-center justify-center">
-            <UIcon name="i-heroicons-paper-airplane" class="w-10 h-10 text-white transform rotate-45" />
+          <div class="w-16 h-16 md:w-20 md:h-20 rounded-2xl flex items-center justify-center" style="background: linear-gradient(135deg, #FF6B35 0%, #F7C59F 100%);">
+            <UIcon name="i-heroicons-paper-airplane" class="w-10 h-10 md:w-12 md:h-12 text-white transform rotate-45" />
           </div>
         </div>
-        <h2 class="text-3xl font-bold text-gray-900 dark:text-white">
-          Welcome to Flysch
+        <UBadge color="secondary" variant="soft" size="sm" class="mb-3">
+          ✈️ Flysch
+        </UBadge>
+        <h2 class="text-3xl md:text-4xl font-bold" style="color: #004E89; font-family: var(--font-family, 'Poppins', sans-serif);">
+          Welcome to Flysch 🛫
         </h2>
-        <p class="mt-2 text-gray-600 dark:text-gray-400">
+        <p class="mt-2" style="color: #6B7280;">
           Sign in to access your flight school matches and saved searches
         </p>
       </div>
 
-      <UCard>
+      <UCard variant="outline" class="bg-white" style="border: 2px solid rgba(5, 74, 145, 0.4); box-shadow: 0 4px 6px rgba(5, 74, 145, 0.1);">
         <UForm :state="form" @submit="handleSubmit" class="space-y-6">
           <UFormGroup label="Email" name="email" required>
             <UInput 
@@ -24,6 +27,8 @@
               placeholder="you@example.com"
               icon="i-heroicons-envelope"
               :disabled="loading"
+              style="border: 3px solid #1A659E; background-color: rgba(239, 239, 208, 0.3);"
+              :ui="{ base: 'focus:border-[#004E89] focus:ring-2 focus:ring-[#1A659E] focus:ring-opacity-30' }"
             />
           </UFormGroup>
 
@@ -34,6 +39,8 @@
               placeholder="••••••••"
               icon="i-heroicons-lock-closed"
               :disabled="loading"
+              style="border: 3px solid #1A659E; background-color: rgba(239, 239, 208, 0.3);"
+              :ui="{ base: 'focus:border-[#004E89] focus:ring-2 focus:ring-[#1A659E] focus:ring-opacity-30' }"
             />
           </UFormGroup>
 
@@ -42,6 +49,8 @@
             block
             size="lg"
             :loading="loading"
+            style="background-color: #FF6B35; color: white;"
+            class="hover:opacity-90 transition-opacity min-h-[48px] font-semibold"
           >
             {{ isSignUp ? 'Create Account' : 'Sign In' }}
           </UButton>
@@ -58,24 +67,28 @@
           </div>
 
           <div class="mt-6 space-y-3">
-            <UButton 
-              variant="outline"
-              block
-              @click="demoSignIn('student')"
-              :loading="demoLoading === 'student'"
-            >
+                  <UButton 
+                    variant="solid"
+                    block
+                    @click="demoSignIn('student')"
+                    :loading="demoLoading === 'student'"
+                    style="background-color: #1A659E; color: white; border: 2px solid #004E89;"
+                    class="min-h-[48px] hover:opacity-90"
+                  >
               <template #leading>
                 <UIcon name="i-heroicons-user" class="w-5 h-5" />
               </template>
               Sign in as Demo Student
             </UButton>
 
-            <UButton 
-              variant="outline"
-              block
-              @click="demoSignIn('school')"
-              :loading="demoLoading === 'school'"
-            >
+                  <UButton 
+                    variant="solid"
+                    block
+                    @click="demoSignIn('school')"
+                    :loading="demoLoading === 'school'"
+                    style="background-color: #1A659E; color: white; border: 2px solid #004E89;"
+                    class="min-h-[48px] hover:opacity-90"
+                  >
               <template #leading>
                 <UIcon name="i-heroicons-building-office" class="w-5 h-5" />
               </template>
@@ -85,9 +98,10 @@
         </div>
 
         <div class="mt-6 text-center">
-          <button
+            <button
             @click="isSignUp = !isSignUp"
-            class="text-sm text-blue-600 hover:text-blue-500 dark:text-blue-400 dark:hover:text-blue-300 font-medium"
+            class="text-sm font-medium transition-opacity hover:opacity-80 min-h-[44px]"
+            style="color: #004E89;"
           >
             {{ isSignUp ? 'Already have an account? Sign in' : 'Need an account? Sign up' }}
           </button>
@@ -108,7 +122,7 @@
 </template>
 
 <script setup lang="ts">
-import { useSupabase } from '../../composables/useSupabase'
+import { useSupabase } from '../composables/useSupabase'
 
 // Meta
 useHead({

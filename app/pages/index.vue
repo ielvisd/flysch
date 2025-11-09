@@ -1,64 +1,66 @@
 <template>
-  <div class="min-h-screen bg-gray-50 dark:bg-gray-900">
-    <!-- Hero Section -->
-    <div class="bg-gradient-to-r from-blue-600 to-blue-800 text-white py-12 px-4">
-      <div class="max-w-7xl mx-auto">
-        <h1 class="text-4xl md:text-5xl font-bold mb-4">
-          Find Your Perfect Flight School
-        </h1>
-        <p class="text-xl text-blue-100 max-w-2xl">
-          Compare trusted flight schools, explore programs, and start your aviation journey with confidence.
-        </p>
-      </div>
-    </div>
-
+  <div class="min-h-screen bg-gray-50">
     <!-- Search and Filters Section -->
-    <div class="max-w-7xl mx-auto px-4 py-8">
-      <div class="grid grid-cols-1 lg:grid-cols-4 gap-6">
+    <div class="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+      <div class="grid grid-cols-1 lg:grid-cols-4 gap-4 md:gap-6">
         <!-- Filters Panel -->
         <div class="lg:col-span-1">
-          <UCard>
+          <UCard variant="outline" class="bg-white" style="border: 2px solid rgba(0, 78, 137, 0.4); box-shadow: 0 4px 6px rgba(0, 78, 137, 0.1);">
             <template #header>
-              <div class="flex items-center justify-between">
-                <h2 class="text-lg font-semibold">Filters</h2>
+              <div class="flex items-center justify-between !py-2">
+                <div class="flex items-center gap-2">
+                  <UBadge color="primary" variant="solid" size="sm" icon="i-heroicons-funnel" class="min-h-[44px] px-3 rounded-lg touch-manipulation" style="background-color: #004E89; color: white;">
+                    Filters
+                  </UBadge>
+                </div>
                 <UButton 
-                  size="xs" 
-                  variant="ghost" 
+                  size="sm" 
+                  variant="solid" 
                   @click="clearFilters"
+                  class="min-h-[44px] px-3 rounded-lg touch-manipulation"
+                  style="background-color: #FF6B35; color: white;"
                 >
                   Clear
                 </UButton>
               </div>
             </template>
 
-            <div class="space-y-4">
+            <div class="space-y-4" style="margin-top: -1rem; padding-top: 0;">
               <!-- Text Search -->
               <div>
-                <label class="block text-sm font-medium mb-2">Search</label>
                 <UInput 
                   v-model="filters.search"
-                  placeholder="School name..."
+                  placeholder="Search school name..."
                   icon="i-heroicons-magnifying-glass"
+                  variant="outline"
                   @input="debouncedSearch"
+                  class="min-h-[44px] w-full touch-manipulation"
+                  style="border: 3px solid #1A659E; background-color: rgba(239, 239, 208, 0.3); border-radius: 0.5rem;"
+                  :ui="{ base: 'focus:border-[#004E89] focus:ring-2 focus:ring-[#1A659E] focus:ring-opacity-30 rounded-lg w-full' }"
+                  aria-label="Search flight schools by name"
                 />
               </div>
 
               <!-- Location -->
               <div>
-                <label class="block text-sm font-medium mb-2">Location</label>
                 <UInput 
                   v-model="locationInput"
                   placeholder="City or ZIP code"
                   icon="i-heroicons-map-pin"
-                  class="mb-2"
+                  variant="outline"
+                  class="mb-2 min-h-[44px] w-full"
+                  style="border: 3px solid #1A659E; background-color: rgba(239, 239, 208, 0.3); border-radius: 0.5rem;"
+                  :ui="{ base: 'focus:border-[#004E89] focus:ring-2 focus:ring-[#1A659E] focus:ring-opacity-30 rounded-lg w-full' }"
                 />
                 <div class="flex items-center gap-2 mb-2">
                   <UButton 
-                    size="xs" 
-                    variant="soft"
-                    icon="i-heroicons-map-pin"
+                    size="md" 
+                    variant="solid"
+                    leading-icon="i-heroicons-map-pin"
                     @click="detectLocation"
                     :loading="detectingLocation"
+                    class="min-h-[44px] w-full touch-manipulation"
+                    style="background-color: #1A659E; color: white; border: 2px solid #004E89;"
                   >
                     Use My Location
                   </UButton>
@@ -79,14 +81,21 @@
 
               <!-- Programs -->
               <div>
-                <label class="block text-sm font-medium mb-2">Programs</label>
-                <div class="space-y-2">
+                <label class="block text-sm font-medium mb-2 flex items-center gap-1" style="color: #004E89; font-weight: 600;">
+                  🎓 Programs
+                </label>
+                <div class="grid grid-cols-2 gap-2">
                   <UCheckbox 
                     v-for="program in programOptions"
                     :key="program"
                     :model-value="selectedPrograms.includes(program)"
                     :value="program"
                     :label="program"
+                    :ui="{ 
+                      label: 'text-gray-900 font-medium text-sm',
+                      wrapper: 'flex items-center',
+                      base: 'h-4 w-4 rounded border-2 border-gray-300 focus:ring-2 focus:ring-primary-500'
+                    }"
                     @update:model-value="(val) => { if (val) selectedPrograms.push(program); else selectedPrograms = selectedPrograms.filter(p => p !== program); applyFilters(); }"
                   />
                 </div>
@@ -94,7 +103,9 @@
 
               <!-- Budget -->
               <div>
-                <label class="block text-sm font-medium mb-2">Budget Range</label>
+                <label class="block text-sm font-medium mb-2 flex items-center gap-1" style="color: #004E89; font-weight: 600;">
+                  💰 Budget Range
+                </label>
                 <USelect 
                   v-model="budgetRange"
                   :options="budgetOptions"
@@ -104,7 +115,9 @@
 
               <!-- Training Type -->
               <div>
-                <label class="block text-sm font-medium mb-2">Training Type</label>
+                <label class="block text-sm font-medium mb-2 flex items-center gap-1" style="color: #004E89; font-weight: 600;">
+                  ✈️ Training Type
+                </label>
                 <div class="space-y-2">
                   <UCheckbox 
                     v-for="trainingType in ['Part 61', 'Part 141']"
@@ -112,6 +125,10 @@
                     :model-value="selectedTrainingTypes.includes(trainingType)"
                     :value="trainingType"
                     :label="trainingType"
+                    :ui="{ 
+                      label: 'text-gray-900 font-medium text-sm',
+                      wrapper: 'flex items-center'
+                    }"
                     @update:model-value="(val) => { if (val) selectedTrainingTypes.push(trainingType); else selectedTrainingTypes = selectedTrainingTypes.filter(t => t !== trainingType); applyFilters(); }"
                   />
                 </div>
@@ -119,16 +136,26 @@
 
               <!-- Fleet Features -->
               <div>
-                <label class="block text-sm font-medium mb-2">Fleet Features</label>
+                <label class="block text-sm font-medium mb-2 flex items-center gap-1" style="color: #004E89; font-weight: 600;">
+                  🛩️ Fleet Features
+                </label>
                 <div class="space-y-2">
                   <UCheckbox 
                     v-model="filters.hasSimulator"
                     label="Simulator Available"
+                    :ui="{ 
+                      label: 'text-gray-900 font-medium text-sm',
+                      wrapper: 'flex items-center'
+                    }"
                     @change="applyFilters"
                   />
                   <UCheckbox 
                     v-model="filters.hasG1000"
                     label="G1000 Equipped"
+                    :ui="{ 
+                      label: 'text-gray-900 font-medium text-sm',
+                      wrapper: 'flex items-center'
+                    }"
                     @change="applyFilters"
                   />
                 </div>
@@ -136,14 +163,20 @@
 
               <!-- Trust Tier -->
               <div>
-                <label class="block text-sm font-medium mb-2">Trust Tier</label>
-                <div class="space-y-2">
+                <label class="block text-sm font-medium mb-2 flex items-center gap-1" style="color: #004E89; font-weight: 600;">
+                  🛡️ Trust Tier
+                </label>
+                <div class="grid grid-cols-2 gap-2">
                   <UCheckbox 
                     v-for="tier in trustTierOptions"
                     :key="tier"
                     :model-value="selectedTiers.includes(tier)"
                     :value="tier"
                     :label="tier"
+                    :ui="{ 
+                      label: 'text-gray-900 font-medium text-sm',
+                      wrapper: 'flex items-center'
+                    }"
                     @update:model-value="(val) => { if (val) selectedTiers.push(tier); else selectedTiers = selectedTiers.filter(t => t !== tier); applyFilters(); }"
                   />
                 </div>
@@ -153,43 +186,83 @@
         </div>
 
         <!-- Results Panel -->
-        <div class="lg:col-span-3 space-y-6">
+        <div id="schools" class="lg:col-span-3 space-y-6">
           <!-- Map View -->
           <ClientOnly>
-            <div class="map-container bg-white dark:bg-gray-800 rounded-lg shadow-md">
-              <div class="h-full flex items-center justify-center text-gray-500">
-                Map will render here (Leaflet integration)
+            <UCard variant="outline" class="bg-white" style="border: 2px solid rgba(0, 78, 137, 0.4); box-shadow: 0 4px 6px rgba(0, 78, 137, 0.1);">
+              <template #header>
+                <div class="flex items-center justify-between">
+                  <h3 class="text-lg font-semibold flex items-center gap-2" style="color: #004E89;">
+                    <UIcon name="i-heroicons-map" class="w-5 h-5" />
+                    School Locations
+                  </h3>
+                  <UBadge v-if="filters.location" color="primary" variant="soft" size="sm">
+                    {{ filters.location.radius }}km radius
+                  </UBadge>
+                </div>
+              </template>
+              <div style="min-height: 400px;">
+                <SchoolMap
+                  v-if="schools && schools.length > 0"
+                  :schools="schools"
+                  :center="filters.location ? { lat: filters.location.lat, lng: filters.location.lng } : undefined"
+                  :radius="filters.location?.radius || 100"
+                  :show-radius="!!filters.location"
+                  :zoom="filters.location ? 8 : 4"
+                />
+                <div v-else class="h-full flex items-center justify-center" style="min-height: 400px; background: linear-gradient(135deg, rgba(26, 101, 158, 0.1) 0%, rgba(0, 78, 137, 0.05) 100%);">
+                  <div class="text-center" style="color: #004E89;">
+                    <UIcon name="i-heroicons-map" class="w-12 h-12 mx-auto mb-2" />
+                    <p class="text-sm font-medium">No schools to display</p>
+                    <p class="text-xs mt-1" style="color: #6B7280;">Adjust your filters to see schools on the map</p>
+                  </div>
+                </div>
               </div>
-            </div>
+            </UCard>
+            <template #fallback>
+              <UCard variant="outline" class="bg-white">
+                <div class="h-96 flex items-center justify-center">
+                  <USkeleton class="h-full w-full" />
+                </div>
+              </UCard>
+            </template>
           </ClientOnly>
 
           <!-- Results Count and Sort -->
-          <div class="flex items-center justify-between">
-            <div>
-              <h3 class="text-lg font-semibold">
+          <div class="flex items-center justify-between mb-4">
+            <div class="flex items-center gap-2">
+              <h3 class="text-lg md:text-xl font-semibold flex items-center gap-2" style="color: #004E89;">
+                <span v-if="!loading">🎯</span>
                 {{ loading ? 'Loading...' : `${schools?.length || 0} Schools Found` }}
               </h3>
+              <UBadge v-if="!loading && schools?.length" color="primary" variant="soft" size="sm">
+                {{ schools.length }} results
+              </UBadge>
             </div>
             <UButton 
-              icon="i-heroicons-arrows-up-down"
-              variant="ghost"
+              leading-icon="i-heroicons-arrows-up-down"
+              variant="solid"
               size="sm"
+              class="min-h-[44px] touch-manipulation"
+              style="background-color: #FF6B35; color: white;"
             >
-              Sort
+              <span class="hidden sm:inline">Sort</span>
+              <span class="sm:hidden">Sort</span>
             </UButton>
           </div>
 
           <!-- Loading State -->
-          <div v-if="loading" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div v-if="loading" class="grid grid-cols-1 md:grid-cols-2 gap-4" role="status" aria-label="Loading schools">
             <USkeleton 
               v-for="i in 4" 
               :key="i" 
               class="h-64 rounded-lg" 
+              aria-hidden="true"
             />
           </div>
 
           <!-- Results Grid -->
-          <div v-else-if="schools && schools.length > 0" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div v-else-if="schools && schools.length > 0" class="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
             <SchoolCard 
               v-for="school in paginatedSchools" 
               :key="school.id"
@@ -198,17 +271,22 @@
           </div>
 
           <!-- No Results -->
-          <div v-else class="text-center py-12">
-            <UIcon name="i-heroicons-magnifying-glass" class="w-16 h-16 mx-auto text-gray-400 mb-4" />
-            <h3 class="text-lg font-semibold text-gray-700 dark:text-gray-300 mb-2">
+          <div v-else class="text-center py-12" role="status" aria-live="polite">
+            <div class="text-6xl mb-4" aria-hidden="true">🔍</div>
+            <UIcon name="i-heroicons-magnifying-glass" class="w-16 h-16 mx-auto mb-4" style="color: #9CA3AF;" aria-hidden="true" />
+            <h3 class="text-lg font-semibold mb-2" style="color: #004E89;">
               No schools found
             </h3>
-            <p class="text-gray-500 dark:text-gray-400 mb-4">
+            <p class="mb-4" style="color: #6B7280;">
               Try adjusting your filters or expanding your search radius
             </p>
             <UButton 
               @click="clearFilters"
-              variant="soft"
+              variant="solid"
+              leading-icon="i-heroicons-arrow-path"
+              class="min-h-[44px] touch-manipulation"
+              style="background-color: #FF6B35; color: white;"
+              aria-label="Clear all filters"
             >
               Clear Filters
             </UButton>
@@ -230,8 +308,9 @@
 
 <script setup lang="ts">
 import type { SchoolFilters } from '~~/types/database'
-import { useSchools } from '~~/composables/useSchools'
-import SchoolCard from '~~/components/SchoolCard.vue'
+import { useSchools } from '~~/app/composables/useSchools'
+import SchoolCard from '~~/app/components/SchoolCard.vue'
+import SchoolMap from '~~/app/components/SchoolMap.vue'
 
 // Meta tags
 definePageMeta({
@@ -280,6 +359,7 @@ const paginatedSchools = computed(() => {
   const end = start + pageSize
   return schools.value.slice(start, end)
 })
+
 
 // Watch for program changes
 watch(selectedPrograms, (newPrograms) => {
@@ -372,12 +452,48 @@ onMounted(async () => {
 <style scoped>
 .map-container {
   height: 400px;
+  min-height: 300px;
 }
 
 @media (max-width: 768px) {
   .map-container {
-    height: 300px;
+    height: 250px;
+    min-height: 250px;
   }
 }
+
+/* Mobile filter improvements */
+@media (max-width: 1024px) {
+  .lg\:col-span-1 {
+    position: relative;
+  }
+}
+
+/* Touch target improvements */
+@media (max-width: 768px) {
+  button, a, input, select, [role="button"], [role="link"] {
+    min-height: 44px;
+    min-width: 44px;
+  }
+  
+  .touch-manipulation {
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
+  }
+}
+
+/* Hero section styling */
+:deep(.page-hero) {
+  background: transparent !important;
+}
+
+:deep(.page-hero .text-highlighted) {
+  color: white !important;
+}
+
+:deep(.page-hero .text-muted) {
+  color: rgba(255, 255, 255, 0.9) !important;
+}
 </style>
+
 

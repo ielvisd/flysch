@@ -21,8 +21,8 @@ export default defineNuxtPlugin({
     
     // Get values from runtime config (set in nuxt.config.ts)
     // Try both camelCase and the actual key names
-    const supabaseUrl = config.public?.supabaseUrl || config.public?.supabase_url || ''
-    const supabaseAnonKey = config.public?.supabaseAnonKey || config.public?.supabase_anon_key || ''
+    const supabaseUrl = (config.public?.supabaseUrl || config.public?.supabase_url || '') as string
+    const supabaseAnonKey = (config.public?.supabaseAnonKey || config.public?.supabase_anon_key || '') as string
 
     // Always log config check (not just in dev)
     console.log('[Supabase Plugin] Config check:', {
@@ -56,7 +56,7 @@ export default defineNuxtPlugin({
       // Return a mock client to prevent errors
       return {
         provide: {
-          supabase: null
+          supabase: null as any
         }
       }
     }

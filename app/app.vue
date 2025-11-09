@@ -1,11 +1,11 @@
 <template>
-  <div>
+  <UApp>
     <NuxtRouteAnnouncer />
     <NuxtLayout>
       <NuxtPage />
     </NuxtLayout>
     <UToaster />
-  </div>
+  </UApp>
 </template>
 
 <script setup lang="ts">
@@ -17,6 +17,3 @@ useHead({
 })
 </script>
 
-<style>
-@import '../assets/css/main.css';
-</style>

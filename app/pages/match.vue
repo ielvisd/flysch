@@ -1,12 +1,15 @@
 <template>
-  <div class="min-h-screen bg-gray-50 dark:bg-gray-900 py-12">
-    <div class="max-w-4xl mx-auto px-4">
+  <div class="min-h-screen py-8 md:py-12 bg-gray-50" style="padding-top: 100px;">
+    <div class="max-w-4xl mx-auto px-4 md:px-6">
       <!-- Header -->
-      <div class="text-center mb-8">
-        <h1 class="text-4xl font-bold text-gray-900 dark:text-white mb-2">
-          Find Your Perfect Match
+      <div class="text-center mb-6 md:mb-8">
+        <UBadge color="primary" variant="soft" size="lg" icon="i-heroicons-sparkles" class="mb-4">
+          ✈️ Flysch AI Matching
+        </UBadge>
+        <h1 class="text-3xl md:text-4xl font-bold mb-2" style="color: #004E89; font-family: var(--font-family, 'Poppins', sans-serif);">
+          Find Your Perfect Match 🎯
         </h1>
-        <p class="text-lg text-gray-600 dark:text-gray-400">
+        <p class="text-lg" style="color: #004E89; opacity: 0.8;">
           Answer a few questions and we'll match you with the best flight schools
         </p>
       </div>
@@ -22,11 +25,12 @@
             <div class="flex items-center">
               <div 
                 :class="[
-                  'w-10 h-10 rounded-full flex items-center justify-center font-semibold transition-all',
+                  'w-10 h-10 md:w-12 md:h-12 rounded-full flex items-center justify-center font-semibold transition-all',
                   currentStep >= step.number 
-                    ? 'bg-blue-600 text-white' 
-                    : 'bg-gray-300 dark:bg-gray-700 text-gray-600 dark:text-gray-400'
+                    ? 'text-white' 
+                    : 'text-white'
                 ]"
+                :style="currentStep >= step.number ? 'background-color: #004E89;' : 'background-color: #1A659E; opacity: 0.5;'"
               >
                 <UIcon 
                   v-if="currentStep > step.number"
@@ -37,24 +41,22 @@
               </div>
               <div 
                 v-if="step.number < steps.length"
-                :class="[
-                  'flex-1 h-1 mx-2 transition-all',
-                  currentStep > step.number ? 'bg-blue-600' : 'bg-gray-300 dark:bg-gray-700'
-                ]"
+                class="flex-1 h-1 mx-2 transition-all"
+                :style="currentStep > step.number ? 'background-color: #004E89;' : 'background-color: #1A659E; opacity: 0.3;'"
               />
             </div>
-            <p class="text-xs mt-2 text-gray-600 dark:text-gray-400">{{ step.title }}</p>
+            <p class="text-xs mt-2" style="color: #6B7280;">{{ step.title }}</p>
           </div>
         </div>
       </div>
 
       <!-- Wizard Content -->
-      <UCard class="mb-6">
+      <UCard variant="outline" class="mb-6 bg-white" style="border: 2px solid rgba(5, 74, 145, 0.4); box-shadow: 0 4px 6px rgba(5, 74, 145, 0.1);">
         <!-- Step 1: Goals -->
         <div v-show="currentStep === 1" class="space-y-6">
           <div>
-            <h2 class="text-2xl font-semibold mb-2">What are your training goals?</h2>
-            <p class="text-gray-600 dark:text-gray-400 mb-4">
+            <h2 class="text-2xl font-semibold mb-2" style="color: #004E89;">What are your training goals?</h2>
+            <p class="mb-4" style="color: #6B7280;">
               Select all certificates and ratings you plan to pursue
             </p>
           </div>
@@ -65,15 +67,18 @@
               :key="goal.value"
               @click="toggleGoal(goal.value)"
               :class="[
-                'p-4 border-2 rounded-lg cursor-pointer transition-all',
+                'p-4 border-2 rounded-lg cursor-pointer transition-all min-h-[100px]',
                 formData.trainingGoals?.includes(goal.value) || false
-                  ? 'border-blue-600 bg-blue-50 dark:bg-blue-900/20'
-                  : 'border-gray-300 dark:border-gray-700 hover:border-blue-400'
+                  ? ''
+                  : 'hover:border-opacity-60'
               ]"
+              :style="formData.trainingGoals?.includes(goal.value) || false
+                ? 'border-color: #004E89; background-color: #1A659E; opacity: 0.2; color: #004E89;'
+                : 'border-color: #1A659E; background-color: transparent; color: #004E89;'"
             >
               <UIcon :name="goal.icon" class="w-8 h-8 mb-2 mx-auto" />
               <p class="text-center font-semibold">{{ goal.label }}</p>
-              <p class="text-xs text-center text-gray-500 mt-1">{{ goal.description }}</p>
+              <p class="text-xs text-center mt-1" style="color: #6B7280;">{{ goal.description }}</p>
             </div>
           </div>
 
@@ -89,14 +94,14 @@
         <!-- Step 2: Budget & Schedule -->
         <div v-show="currentStep === 2" class="space-y-6">
           <div>
-            <h2 class="text-2xl font-semibold mb-2">Budget & Schedule</h2>
-            <p class="text-gray-600 dark:text-gray-400 mb-4">
+            <h2 class="text-2xl font-semibold mb-2" style="color: #004E89;">Budget & Schedule</h2>
+            <p class="mb-4" style="color: #6B7280;">
               Help us understand your financial and time constraints
             </p>
           </div>
 
           <div>
-            <label class="block text-sm font-medium mb-2">
+            <label class="block text-sm font-medium mb-2" style="color: #004E89;">
               Maximum Budget: ${{ formData.maxBudget?.toLocaleString() || '0' }}
             </label>
             <input 
@@ -105,27 +110,31 @@
               min="5000"
               max="50000"
               step="1000"
-              class="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer dark:bg-gray-700"
+              class="w-full h-3 rounded-lg appearance-none cursor-pointer"
+              style="background: linear-gradient(to right, #1A659E 0%, #004E89 100%);"
             />
-            <div class="flex justify-between text-xs text-gray-500 mt-1">
+            <div class="flex justify-between text-xs mt-1" style="color: #6B7280;">
               <span>$5,000</span>
               <span>$50,000</span>
             </div>
           </div>
 
           <div>
-            <label class="block text-sm font-medium mb-2">Schedule Flexibility</label>
+            <label class="block text-sm font-medium mb-2" style="color: #004E89;">Schedule Flexibility</label>
             <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
               <div 
                 v-for="schedule in scheduleOptions"
                 :key="schedule.value"
                 @click="formData.scheduleFlexibility = schedule.value as MatchInputs['scheduleFlexibility']"
                 :class="[
-                  'p-3 border-2 rounded-lg cursor-pointer text-center transition-all',
+                  'p-3 border-2 rounded-lg cursor-pointer text-center transition-all min-h-[60px] flex items-center justify-center',
                   formData.scheduleFlexibility === schedule.value
-                    ? 'border-blue-600 bg-blue-50 dark:bg-blue-900/20'
-                    : 'border-gray-300 dark:border-gray-700 hover:border-blue-400'
+                    ? ''
+                    : 'hover:border-opacity-60'
                 ]"
+                :style="formData.scheduleFlexibility === schedule.value
+                  ? 'border-color: #054A91; background-color: #28AFFA; opacity: 0.2; color: #054A91;'
+                  : 'border-color: #28AFFA; background-color: transparent; color: #054A91;'"
               >
                 <p class="font-medium">{{ schedule.label }}</p>
               </div>
@@ -147,8 +156,8 @@
         <!-- Step 3: Location -->
         <div v-show="currentStep === 3" class="space-y-6">
           <div>
-            <h2 class="text-2xl font-semibold mb-2">Location Preferences</h2>
-            <p class="text-gray-600 dark:text-gray-400 mb-4">
+            <h2 class="text-2xl font-semibold mb-2" style="color: #004E89;">Location Preferences</h2>
+            <p class="mb-4" style="color: #6B7280;">
               Where would you like to train?
             </p>
           </div>
@@ -159,7 +168,7 @@
               variant="soft"
               @click="detectLocation"
               :loading="detectingLocation"
-              class="mb-4"
+              class="mb-4 min-h-[44px] touch-manipulation"
             >
               Use My Current Location
             </UButton>
@@ -195,7 +204,7 @@
               step="10"
               class="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer dark:bg-gray-700"
             />
-            <div class="flex justify-between text-xs text-gray-500 mt-1">
+            <div class="flex justify-between text-xs mt-1" style="color: #6B7280;">
               <span>10 km</span>
               <span>500 km</span>
             </div>
@@ -210,25 +219,28 @@
         <!-- Step 4: Preferences -->
         <div v-show="currentStep === 4" class="space-y-6">
           <div>
-            <h2 class="text-2xl font-semibold mb-2">Training Preferences</h2>
-            <p class="text-gray-600 dark:text-gray-400 mb-4">
+            <h2 class="text-2xl font-semibold mb-2" style="color: #004E89;">Training Preferences</h2>
+            <p class="mb-4" style="color: #6B7280;">
               Tell us about your preferred training environment
             </p>
           </div>
 
           <div>
-            <label class="block text-sm font-medium mb-2">Preferred Aircraft</label>
+            <label class="block text-sm font-medium mb-2" style="color: #004E89;">Preferred Aircraft</label>
             <div class="grid grid-cols-2 md:grid-cols-3 gap-3">
               <div 
                 v-for="aircraft in aircraftOptions"
                 :key="aircraft"
                 @click="toggleAircraft(aircraft)"
                 :class="[
-                  'p-3 border-2 rounded-lg cursor-pointer text-center transition-all',
+                  'p-3 border-2 rounded-lg cursor-pointer text-center transition-all min-h-[60px] flex items-center justify-center',
                   formData.preferredAircraft?.includes(aircraft)
-                    ? 'border-blue-600 bg-blue-50 dark:bg-blue-900/20'
-                    : 'border-gray-300 dark:border-gray-700 hover:border-blue-400'
+                    ? ''
+                    : 'hover:border-opacity-60'
                 ]"
+                :style="formData.preferredAircraft?.includes(aircraft)
+                  ? 'border-color: #054A91; background-color: #28AFFA; opacity: 0.2; color: #054A91;'
+                  : 'border-color: #28AFFA; background-color: transparent; color: #054A91;'"
               >
                 <p class="font-medium text-sm">{{ aircraft }}</p>
               </div>
@@ -236,21 +248,24 @@
           </div>
 
           <div>
-            <label class="block text-sm font-medium mb-2">Training Type Preference</label>
+            <label class="block text-sm font-medium mb-2" style="color: #004E89;">Training Type Preference</label>
             <div class="grid grid-cols-2 gap-3">
               <div 
                 v-for="type in trainingTypes"
                 :key="type.value"
                 @click="formData.preferredTrainingType = type.value as TrainingType"
                 :class="[
-                  'p-4 border-2 rounded-lg cursor-pointer transition-all',
+                  'p-4 border-2 rounded-lg cursor-pointer transition-all min-h-[80px]',
                   formData.preferredTrainingType === type.value
-                    ? 'border-blue-600 bg-blue-50 dark:bg-blue-900/20'
-                    : 'border-gray-300 dark:border-gray-700 hover:border-blue-400'
+                    ? ''
+                    : 'hover:border-opacity-60'
                 ]"
+                :style="formData.preferredTrainingType === type.value
+                  ? 'border-color: #054A91; background-color: #28AFFA; opacity: 0.2; color: #054A91;'
+                  : 'border-color: #28AFFA; background-color: transparent; color: #054A91;'"
               >
                 <p class="font-semibold mb-1">{{ type.label }}</p>
-                <p class="text-xs text-gray-600 dark:text-gray-400">{{ type.description }}</p>
+                <p class="text-xs" style="color: #6B7280;">{{ type.description }}</p>
               </div>
             </div>
           </div>
@@ -261,9 +276,30 @@
           <div class="text-center py-8" v-if="matchLoading">
             <UIcon name="i-heroicons-arrow-path" class="w-12 h-12 mx-auto mb-4 animate-spin text-blue-600" />
             <h3 class="text-xl font-semibold mb-2">Finding Your Perfect Matches...</h3>
-            <p class="text-gray-600 dark:text-gray-400">
+            <p style="color: #6B7280;">
               Our AI is analyzing {{ candidateCount }} schools that meet your criteria
             </p>
+          </div>
+
+          <div v-else-if="matchError" class="text-center py-8">
+            <UAlert 
+              icon="i-heroicons-exclamation-triangle"
+              color="error"
+              variant="soft"
+              title="Matching Error"
+            >
+              <template #description>
+                <p class="mt-2">{{ matchError.message || 'Failed to complete matching. Please try again.' }}</p>
+                <UButton 
+                  @click="submitMatching"
+                  variant="solid"
+                  class="mt-4 min-h-[44px] touch-manipulation"
+                  style="background-color: #FF6B35; color: white;"
+                >
+                  Retry Matching
+                </UButton>
+              </template>
+            </UAlert>
           </div>
 
           <div v-else-if="matchResults">
@@ -273,6 +309,8 @@
               color="primary"
               variant="soft"
               title="AI Match Analysis"
+              role="region"
+              aria-label="AI Match Analysis"
             >
               <template #description>
                 <div class="prose prose-sm dark:prose-invert mt-2">
@@ -283,34 +321,37 @@
 
             <!-- Top Matches -->
             <div>
-              <h3 class="text-xl font-semibold mb-4">Your Top Matches</h3>
+              <h3 class="text-xl font-semibold mb-4" style="color: #004E89;">Your Top Matches</h3>
               <div class="space-y-4">
                 <div 
                   v-for="(schoolId, index) in matchResults.ranked_schools.slice(0, 5)"
                   :key="schoolId"
-                  class="flex items-center gap-4 p-4 border-2 border-gray-200 dark:border-gray-700 rounded-lg hover:border-blue-400 transition-all cursor-pointer"
+                  class="match-result-card flex items-center gap-4 p-4 border-2 rounded-lg transition-all cursor-pointer bg-white"
+                  style="border: 2px solid rgba(5, 74, 145, 0.4); box-shadow: 0 2px 4px rgba(5, 74, 145, 0.1);"
                   @click="$router.push(`/schools/${schoolId}`)"
                 >
                   <div 
                     :class="[
                       'w-12 h-12 rounded-full flex items-center justify-center font-bold text-xl',
                       index === 0 ? 'bg-yellow-400 text-yellow-900' :
-                      index === 1 ? 'bg-gray-300 text-gray-700' :
+                      index === 1 ? 'bg-gray-300' :
                       index === 2 ? 'bg-orange-300 text-orange-900' :
-                      'bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300'
+                      'bg-blue-100 text-blue-700'
                     ]"
+                    :style="index === 1 ? 'color: #374151;' : ''"
                   >
                     {{ index + 1 }}
                   </div>
                   <div class="flex-1">
-                    <p class="font-semibold text-lg">School #{{ index + 1 }}</p>
-                    <p class="text-sm text-gray-500">
+                    <p class="font-semibold text-lg" style="color: #004E89;">School #{{ index + 1 }}</p>
+                    <p class="text-sm" style="color: #6B7280;">
                       Match Score: {{ matchResults.match_scores[schoolId] }}%
                     </p>
                   </div>
                   <UButton 
                     icon="i-heroicons-arrow-right"
-                    variant="ghost"
+                    variant="solid"
+                    style="background-color: #FF6B35; color: white;"
                   >
                     View Details
                   </UButton>
@@ -319,16 +360,21 @@
             </div>
 
             <!-- Actions -->
-            <div class="flex gap-3 justify-center pt-6">
+            <div class="flex flex-col sm:flex-row gap-3 justify-center pt-6">
               <UButton 
-                variant="outline"
+                variant="solid"
                 @click="restartQuiz"
+                style="background-color: #FF6B35; color: white;"
+                class="min-h-[44px] hover:opacity-90 touch-manipulation"
               >
                 Start Over
               </UButton>
               <UButton 
                 icon="i-heroicons-arrow-path"
                 @click="adjustPreferences"
+                variant="solid"
+                style="background-color: #FFF952; color: #054A91;"
+                class="min-h-[44px] hover:opacity-90 transition-opacity font-semibold touch-manipulation"
               >
                 Adjust Preferences
               </UButton>
@@ -341,9 +387,11 @@
       <div class="flex justify-between">
         <UButton 
           v-if="currentStep > 1 && !showResults"
-          variant="outline"
+          variant="solid"
           icon="i-heroicons-arrow-left"
           @click="previousStep"
+          style="background-color: #1A659E; color: white; border: 2px solid #004E89;"
+          class="min-h-[44px] hover:opacity-90 touch-manipulation"
         >
           Back
         </UButton>
@@ -354,6 +402,10 @@
           :disabled="!canProceed"
           trailing-icon="i-heroicons-arrow-right"
           @click="nextStep"
+          variant="solid"
+          size="lg"
+          style="background-color: #FFF952; color: #054A91;"
+          class="hover:opacity-90 transition-opacity min-h-[44px] font-semibold touch-manipulation"
         >
           {{ currentStep === 4 ? 'Find Matches' : 'Continue' }}
         </UButton>
@@ -364,7 +416,7 @@
 
 <script setup lang="ts">
 import type { MatchInputs, ProgramType, TrainingType } from '~~/types/database'
-import { useMatching } from '~~/composables/useMatching'
+import { useMatching } from '~~/app/composables/useMatching'
 
 // Meta
 useHead({
@@ -375,7 +427,7 @@ useHead({
 })
 
 // Composables
-const { runMatching, matchResults, matchLoading, saveQuizProgress, loadQuizProgress, clearQuizProgress } = useMatching()
+const { runMatching, matchResults, matchLoading, matchError, saveQuizProgress, loadQuizProgress, clearQuizProgress } = useMatching()
 const { coords } = useGeolocation()
 
 // State
@@ -577,4 +629,35 @@ onMounted(() => {
   loadQuizProgress()
 })
 </script>
+
+<style scoped>
+.match-result-card {
+  border-color: rgba(5, 74, 145, 0.2);
+  transition: border-color 0.2s ease;
+}
+
+.match-result-card:hover {
+  border-color: #1A659E !important;
+  border-width: 3px !important;
+  box-shadow: 0 8px 16px rgba(26, 101, 158, 0.3) !important;
+  background: linear-gradient(to bottom, #ffffff 0%, rgba(26, 101, 158, 0.02) 100%);
+}
+
+/* Mobile touch improvements */
+@media (max-width: 768px) {
+  button, a, [role="button"], [role="link"] {
+    min-height: 44px;
+    min-width: 44px;
+  }
+  
+  .touch-manipulation {
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
+  }
+  
+  .match-result-card {
+    min-height: 80px;
+  }
+}
+</style>
 

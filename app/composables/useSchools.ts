@@ -15,10 +15,14 @@ export const useSchools = () => {
     return useSupabase()
   }
   
-  // Global state for caching schools
+  // Global state for caching schools with TTL
   const schoolsCache = useState<School[]>('schools-cache', () => [])
+  const cacheTimestamp = useState<number>('schools-cache-timestamp', () => 0)
   const loading = useState<boolean>('schools-loading', () => false)
   const error = useState<{ message: string; code?: string } | null>('schools-error', () => null)
+  
+  // Cache TTL: 5 minutes
+  const CACHE_TTL = 5 * 60 * 1000
 
   /**
    * Fetch schools with filters
@@ -27,6 +31,23 @@ export const useSchools = () => {
     if (process.server) {
       console.warn('fetchSchools cannot run on server-side')
       return []
+    }
+    
+    // Check cache first (only if no filters or minimal filters)
+    const hasFilters = filters && (
+      filters.search || 
+      filters.location || 
+      filters.programs?.length || 
+      filters.trustTiers?.length ||
+      filters.budgetMin || 
+      filters.budgetMax
+    )
+    
+    if (!hasFilters && schoolsCache.value.length > 0) {
+      const cacheAge = Date.now() - cacheTimestamp.value
+      if (cacheAge < CACHE_TTL) {
+        return schoolsCache.value
+      }
     }
     
     loading.value = true
@@ -98,7 +119,12 @@ export const useSchools = () => {
         )
       }
 
-      schoolsCache.value = results
+      // Update cache only if no filters or minimal filters
+      if (!hasFilters) {
+        schoolsCache.value = results
+        cacheTimestamp.value = Date.now()
+      }
+      
       return results
 
     } catch (err) {
@@ -275,6 +301,7 @@ export const useSchools = () => {
    */
   const clearCache = () => {
     schoolsCache.value = []
+    cacheTimestamp.value = 0
   }
 
   return {

@@ -3,14 +3,14 @@
     <!-- Navigation Bar -->
     <header 
       class="sticky top-0 z-50 shadow-xl w-full"
-      style="background-color: #054A91; border-bottom: 3px solid #28AFFA; min-height: 64px;"
+      style="background-color: #004E89; border-bottom: 3px solid #FF6B35; min-height: 64px;"
     >
       <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div class="flex items-center justify-between gap-3 h-16">
           <!-- Left: Logo -->
           <div class="flex items-center gap-2">
             <NuxtLink to="/" class="flex items-center gap-2 group">
-              <div class="w-10 h-10 md:w-12 md:h-12 rounded-lg flex items-center justify-center transform group-hover:scale-110 transition-transform" style="background: linear-gradient(135deg, #FFF952 0%, #FFCE22 100%);">
+              <div class="w-10 h-10 md:w-12 md:h-12 rounded-lg flex items-center justify-center transform group-hover:scale-110 transition-transform" style="background: linear-gradient(135deg, #FF6B35 0%, #F7C59F 100%);">
                 <UIcon name="i-heroicons-paper-airplane" class="w-6 h-6 md:w-7 md:h-7 text-white transform rotate-45" />
               </div>
               <span class="text-xl md:text-2xl font-bold text-white" style="font-family: var(--font-family, 'Poppins', sans-serif);">Flysch</span>
@@ -25,13 +25,24 @@
           <!-- Right: Actions -->
           <div class="flex items-center gap-2">
             <!-- Dark Mode Toggle -->
-            <UButton 
-              :icon="isDark ? 'i-heroicons-moon' : 'i-heroicons-sun'"
-              variant="ghost"
-              @click="toggleDarkMode"
-              aria-label="Toggle dark mode"
-              class="text-white"
-            />
+            <ClientOnly>
+              <UButton 
+                :icon="isDark ? 'i-heroicons-moon' : 'i-heroicons-sun'"
+                variant="ghost"
+                @click="toggleDarkMode"
+                aria-label="Toggle dark mode"
+                class="text-white"
+              />
+              <template #fallback>
+                <UButton 
+                  icon="i-heroicons-sun"
+                  variant="ghost"
+                  aria-label="Toggle dark mode"
+                  class="text-white"
+                  disabled
+                />
+              </template>
+            </ClientOnly>
 
             <!-- Auth Button -->
             <UButton 
@@ -39,16 +50,16 @@
               to="/login"
               icon="i-heroicons-user-circle"
               size="md"
-              style="background-color: #FFF952; color: #054A91;"
+              style="background-color: #FF6B35; color: white;"
               class="hover:opacity-90 transition-opacity font-semibold"
             >
               Sign In
             </UButton>
             
-            <UDropdown 
+            <UDropdownMenu 
               v-else
               :items="userMenuItems"
-              :popper="{ placement: 'bottom-end' }"
+              :content="{ align: 'end', side: 'bottom' }"
             >
               <UButton 
                 icon="i-heroicons-user-circle"
@@ -58,7 +69,7 @@
               >
                 {{ user.email }}
               </UButton>
-            </UDropdown>
+            </UDropdownMenu>
 
             <!-- Mobile Menu Toggle -->
             <UButton
@@ -72,7 +83,7 @@
       </div>
 
       <!-- Mobile Menu -->
-      <div v-if="mobileMenuOpen" class="lg:hidden border-t" style="border-color: rgba(40, 175, 250, 0.3);">
+      <div v-if="mobileMenuOpen" class="lg:hidden border-t" style="border-color: rgba(255, 107, 53, 0.3);">
         <div class="px-4 py-4">
           <UNavigationMenu :items="navItems" orientation="vertical" class="-mx-2.5" />
         </div>
@@ -85,13 +96,13 @@
     </main>
 
     <!-- Footer -->
-    <footer class="py-12" style="background-color: #054A91; color: #28AFFA;">
+    <footer class="py-12" style="background-color: #004E89; color: #F7C59F;">
       <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div class="grid grid-cols-1 md:grid-cols-4 gap-8">
           <!-- Brand -->
           <div class="md:col-span-2">
             <div class="flex items-center gap-2 mb-4">
-              <div class="w-8 h-8 rounded-lg flex items-center justify-center" style="background: linear-gradient(135deg, #FFF952 0%, #FFCE22 100%);">
+              <div class="w-8 h-8 rounded-lg flex items-center justify-center" style="background: linear-gradient(135deg, #FF6B35 0%, #F7C59F 100%);">
                 <UIcon name="i-heroicons-paper-airplane" class="w-5 h-5 text-white transform rotate-45" />
               </div>
               <span class="text-lg font-bold text-white" style="font-family: var(--font-family, 'Poppins', sans-serif);">Flysch</span>
@@ -185,18 +196,18 @@ const userMenuItems = computed(() => [[
   {
     label: 'My Matches',
     icon: 'i-heroicons-star',
-    click: () => router.push('/match')
+    onSelect: () => router.push('/match')
   },
   {
     label: 'Settings',
     icon: 'i-heroicons-cog-6-tooth',
-    click: () => {}
+    onSelect: () => {}
   }
 ], [
   {
     label: 'Sign Out',
     icon: 'i-heroicons-arrow-right-on-rectangle',
-    click: handleSignOut
+    onSelect: handleSignOut
   }
 ]])
 

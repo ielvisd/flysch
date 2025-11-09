@@ -163,8 +163,14 @@ vercel --prod
 In your Vercel project settings:
 
 1. Go to Settings → Environment Variables
-2. Add all variables from your `.env` file
+2. Add all variables from your `.env` file:
+   - `SUPABASE_URL` - Your Supabase project URL
+   - `SUPABASE_ANON_KEY` - Your Supabase anonymous key
+   - `SUPABASE_SERVICE_ROLE_KEY` - Your Supabase service role key (for seeding)
+   - `OPENAI_API_KEY` or `GROK_API_KEY` - Your AI API key
 3. Make sure to add them for Production, Preview, and Development environments
+
+**Note**: The `vercel.json` file is configured for automatic deployment. The build command and output directory are already set.
 
 ## 📁 Project Structure
 

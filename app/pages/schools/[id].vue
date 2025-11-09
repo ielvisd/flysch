@@ -1,5 +1,5 @@
 <template>
-  <div class="min-h-screen bg-gray-50 dark:bg-gray-900">
+  <div class="min-h-screen bg-gray-50" style="padding-top: 80px;">
     <div v-if="loading" class="max-w-7xl mx-auto px-4 py-8">
       <USkeleton class="h-64 mb-6 rounded-lg" />
       <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -11,88 +11,108 @@
 
     <div v-else-if="school" class="max-w-7xl mx-auto px-4 py-8">
       <!-- Hero Section -->
-      <UCard class="mb-6">
+      <UCard variant="outline" class="mb-6 bg-white" style="border: 2px solid rgba(0, 78, 137, 0.4); box-shadow: 0 4px 6px rgba(0, 78, 137, 0.1);">
         <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
           <div class="md:col-span-2">
             <div class="flex items-start justify-between mb-4">
               <div>
-                <h1 class="text-3xl font-bold text-gray-900 dark:text-white mb-2">
+                <div class="flex items-center gap-2 mb-2">
+                  <UBadge color="primary" variant="soft" size="xs">
+                    ✈️ Flysch
+                  </UBadge>
+                </div>
+                <h1 class="text-2xl md:text-3xl font-bold mb-2" style="color: #004E89; font-family: var(--font-family, 'Poppins', sans-serif);">
                   {{ school.name }}
                 </h1>
-                <p class="text-lg text-gray-600 dark:text-gray-400 flex items-center gap-2">
+                <p class="text-base md:text-lg flex items-center gap-2" style="color: #6B7280;">
                   <UIcon name="i-heroicons-map-pin" class="w-5 h-5" />
-                  {{ school.address }}
+                  📍 {{ school.address }}
                 </p>
               </div>
               <UBadge 
                 :color="tierBadge.color"
                 :icon="tierBadge.icon"
                 size="lg"
-                variant="subtle"
+                :variant="school.trust_tier === 'Premier' || school.trust_tier === 'Verified' ? 'solid' : 'subtle'"
               >
                 {{ tierBadge.label }}
               </UBadge>
             </div>
 
             <div class="flex flex-wrap gap-4 mb-4">
-              <div v-if="school.phone" class="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
+              <div v-if="school.phone" class="flex items-center gap-2 text-sm" style="color: #374151;">
                 <UIcon name="i-heroicons-phone" class="w-4 h-4" />
                 {{ school.phone }}
               </div>
               <div v-if="school.website" class="flex items-center gap-2 text-sm">
                 <UIcon name="i-heroicons-globe-alt" class="w-4 h-4" />
-                <a :href="school.website" target="_blank" class="text-blue-600 hover:underline">
+                <a :href="school.website" target="_blank" style="color: #1A659E;" class="hover:underline font-medium">
                   Visit Website
                 </a>
               </div>
-              <div v-if="school.email" class="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
+              <div v-if="school.email" class="flex items-center gap-2 text-sm" style="color: #374151;">
                 <UIcon name="i-heroicons-envelope" class="w-4 h-4" />
                 {{ school.email }}
               </div>
             </div>
 
-            <div class="flex gap-3">
+            <div class="flex flex-col sm:flex-row gap-3">
               <UButton 
-                color="primary"
                 size="lg"
                 icon="i-heroicons-paper-airplane"
                 @click="openInquiryModal"
+                variant="solid"
+                style="background-color: #FF6B35; color: white;"
+                class="hover:opacity-90 transition-opacity min-h-[48px] flex-1 sm:flex-none font-semibold touch-manipulation"
               >
                 Request Information
               </UButton>
               <UButton 
                 v-if="!school.claimed_by"
-                variant="outline"
+                variant="solid"
                 size="lg"
                 icon="i-heroicons-building-office"
                 @click="claimSchool"
+                style="background-color: #1A659E; color: white; border: 2px solid #004E89;"
+                class="hover:opacity-90 min-h-[48px] flex-1 sm:flex-none touch-manipulation"
               >
                 Claim School
               </UButton>
             </div>
           </div>
 
-          <!-- Map Placeholder -->
+          <!-- Map -->
           <div class="md:col-span-1">
             <ClientOnly>
-              <div class="h-64 bg-gray-200 dark:bg-gray-700 rounded-lg flex items-center justify-center">
-                <div class="text-center text-gray-500">
-                  <UIcon name="i-heroicons-map" class="w-12 h-12 mx-auto mb-2" />
-                  <p class="text-sm">Map View</p>
+              <div class="h-64 rounded-lg overflow-hidden border" style="border-color: rgba(0, 78, 137, 0.2);">
+                <SchoolMap
+                  v-if="school"
+                  :single-school="school"
+                  :zoom="12"
+                  height="256px"
+                />
+                <div v-else class="h-full flex items-center justify-center bg-white" style="background: linear-gradient(135deg, rgba(26, 101, 158, 0.1) 0%, rgba(0, 78, 137, 0.05) 100%);">
+                  <div class="text-center" style="color: #004E89;">
+                    <UIcon name="i-heroicons-map" class="w-12 h-12 mx-auto mb-2" />
+                    <p class="text-sm font-medium">Loading map...</p>
+                  </div>
                 </div>
               </div>
+              <template #fallback>
+                <div class="h-64 rounded-lg overflow-hidden border bg-gray-100 animate-pulse" style="border-color: rgba(0, 78, 137, 0.2);"></div>
+              </template>
             </ClientOnly>
           </div>
         </div>
       </UCard>
 
-      <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6">
         <!-- Main Content -->
-        <div class="md:col-span-2 space-y-6">
+        <div class="md:col-span-2 space-y-4 md:space-y-6">
           <!-- Programs Section -->
-          <UCard>
+          <UCard variant="outline" class="bg-white" style="border: 2px solid rgba(0, 78, 137, 0.4); box-shadow: 0 4px 6px rgba(0, 78, 137, 0.1);">
             <template #header>
-              <h2 class="text-xl font-semibold flex items-center gap-2">
+              <h2 class="text-xl font-semibold flex items-center gap-2" style="color: #004E89;">
                 <UIcon name="i-heroicons-academic-cap" class="w-6 h-6" />
                 Training Programs
               </h2>
@@ -102,13 +122,13 @@
               v-if="school.programs && school.programs.length > 0"
               :items="programAccordionItems"
             />
-            <p v-else class="text-gray-500">No programs listed</p>
+            <p v-else style="color: #6B7280;">No programs listed</p>
           </UCard>
 
           <!-- Fleet Section -->
-          <UCard>
+          <UCard variant="outline" class="bg-white" style="border: 2px solid rgba(0, 78, 137, 0.4); box-shadow: 0 4px 6px rgba(0, 78, 137, 0.1);">
             <template #header>
-              <h2 class="text-xl font-semibold flex items-center gap-2">
+              <h2 class="text-xl font-semibold flex items-center gap-2" style="color: #004E89;">
                 <UIcon name="i-heroicons-paper-airplane" class="w-6 h-6" />
                 Fleet
               </h2>
@@ -119,14 +139,15 @@
                 <div 
                   v-for="aircraft in school.fleet.aircraft" 
                   :key="aircraft.type"
-                  class="flex items-center justify-between py-3 border-b border-gray-200 dark:border-gray-700 last:border-0"
+                  class="flex items-center justify-between py-3 border-b last:border-0"
+                  style="border-color: #E5E7EB;"
                 >
                   <div>
-                    <p class="font-medium text-gray-900 dark:text-white">
+                    <p class="font-medium" style="color: #004E89;">
                       {{ aircraft.type }}
                     </p>
                     <div class="flex items-center gap-3 mt-1">
-                      <span class="text-sm text-gray-500">{{ aircraft.count }} available</span>
+                      <span class="text-sm" style="color: #6B7280;">{{ aircraft.count }} available</span>
                       <UBadge 
                         v-if="aircraft.hasG1000" 
                         color="success" 
@@ -138,29 +159,29 @@
                     </div>
                   </div>
                   <div v-if="aircraft.hourlyRate" class="text-right">
-                    <p class="text-sm text-gray-500">Hourly Rate</p>
-                    <p class="font-semibold text-gray-900 dark:text-white">
+                    <p class="text-sm" style="color: #6B7280;">Hourly Rate</p>
+                    <p class="font-semibold" style="color: #004E89;">
                       ${{ aircraft.hourlyRate }}
                     </p>
                   </div>
                 </div>
               </div>
 
-              <div v-if="school.fleet.simulators" class="mt-6 pt-6 border-t border-gray-200 dark:border-gray-700">
-                <h3 class="font-medium text-gray-900 dark:text-white mb-2">Simulators</h3>
-                <p class="text-sm text-gray-600 dark:text-gray-400">
+              <div v-if="school.fleet.simulators" class="mt-6 pt-6 border-t" style="border-color: #E5E7EB;">
+                <h3 class="font-medium mb-2" style="color: #004E89;">Simulators</h3>
+                <p class="text-sm" style="color: #374151;">
                   {{ school.fleet.simulators.count }} simulator{{ school.fleet.simulators.count > 1 ? 's' : '' }} available
                   ({{ school.fleet.simulators.types.join(', ') }})
                 </p>
               </div>
             </div>
-            <p v-else class="text-gray-500">No fleet information available</p>
+            <p v-else style="color: #6B7280;">No fleet information available</p>
           </UCard>
 
           <!-- Reviews Section (Mock) -->
-          <UCard>
+          <UCard variant="outline" class="bg-white" style="border: 2px solid rgba(0, 78, 137, 0.4); box-shadow: 0 4px 6px rgba(0, 78, 137, 0.1);">
             <template #header>
-              <h2 class="text-xl font-semibold flex items-center gap-2">
+              <h2 class="text-xl font-semibold flex items-center gap-2" style="color: #004E89;">
                 <UIcon name="i-heroicons-star" class="w-6 h-6" />
                 Student Reviews
               </h2>
@@ -179,19 +200,20 @@
                   />
                   <div class="flex-1">
                     <div class="flex items-center justify-between mb-1">
-                      <p class="font-medium text-gray-900 dark:text-white">{{ review.name }}</p>
-                      <span class="text-sm text-gray-500">{{ review.date }}</span>
+                      <p class="font-medium" style="color: #004E89;">{{ review.name }}</p>
+                      <span class="text-sm" style="color: #6B7280;">{{ review.date }}</span>
                     </div>
                     <div class="flex items-center gap-1 mb-2">
                       <UIcon 
                         v-for="i in 5" 
                         :key="i"
                         name="i-heroicons-star-solid"
-                        :class="i <= review.rating ? 'text-yellow-400' : 'text-gray-300'"
+                        :class="i <= review.rating ? 'text-yellow-400' : ''"
+                        :style="i <= review.rating ? '' : 'color: #D1D5DB;'"
                         class="w-4 h-4"
                       />
                     </div>
-                    <p class="text-sm text-gray-600 dark:text-gray-400">{{ review.text }}</p>
+                    <p class="text-sm" style="color: #374151;">{{ review.text }}</p>
                   </div>
                 </div>
               </div>
@@ -200,11 +222,11 @@
         </div>
 
         <!-- Sidebar -->
-        <div class="md:col-span-1 space-y-6">
+        <div class="md:col-span-1 space-y-4 md:space-y-6">
           <!-- Evidence Panel -->
-          <UCard>
+          <UCard variant="outline" class="bg-white" style="border: 2px solid rgba(0, 78, 137, 0.4); box-shadow: 0 4px 6px rgba(0, 78, 137, 0.1);">
             <template #header>
-              <h2 class="text-lg font-semibold flex items-center gap-2">
+              <h2 class="text-lg font-semibold flex items-center gap-2" style="color: #004E89;">
                 <UIcon name="i-heroicons-shield-check" class="w-5 h-5" />
                 Trust & Verification
               </h2>
@@ -212,26 +234,27 @@
 
             <div class="space-y-4">
               <div>
-                <p class="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Trust Tier</p>
+                <p class="text-sm font-medium mb-2" style="color: #004E89;">Trust Tier</p>
                 <UBadge 
                   :color="tierBadge.color"
                   :icon="tierBadge.icon"
                   size="md"
-                  variant="subtle"
+                  :variant="school.trust_tier === 'Premier' || school.trust_tier === 'Verified' ? 'solid' : 'subtle'"
                   class="w-full justify-center py-2"
                 >
                   {{ tierBadge.label }}
                 </UBadge>
-                <p class="text-xs text-gray-500 mt-2">{{ tierDescription }}</p>
+                <p class="text-xs mt-2" style="color: #6B7280;">{{ tierDescription }}</p>
               </div>
 
               <div v-if="tierCriteria.length > 0">
-                <p class="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Verification Criteria</p>
+                <p class="text-sm font-medium mb-2" style="color: #004E89;">Verification Criteria</p>
                 <ul class="space-y-1">
                   <li 
                     v-for="(criterion, index) in tierCriteria"
                     :key="index"
-                    class="text-xs text-gray-600 dark:text-gray-400 flex items-start gap-2"
+                    class="text-xs flex items-start gap-2"
+                    style="color: #374151;"
                   >
                     <UIcon name="i-heroicons-check-circle" class="w-4 h-4 text-green-500 shrink-0 mt-0.5" />
                     <span>{{ criterion }}</span>
@@ -240,7 +263,7 @@
               </div>
 
               <div v-if="school.verified_at">
-                <p class="text-xs text-gray-500">
+                <p class="text-xs" style="color: #6B7280;">
                   Verified: {{ formatDate(school.verified_at) }}
                 </p>
               </div>
@@ -248,9 +271,9 @@
           </UCard>
 
           <!-- Performance Metrics -->
-          <UCard v-if="school.fsp_signals">
+          <UCard v-if="school.fsp_signals" variant="outline" class="bg-white">
             <template #header>
-              <h2 class="text-lg font-semibold flex items-center gap-2">
+              <h2 class="text-lg font-semibold flex items-center gap-2" style="color: #004E89;">
                 <UIcon name="i-heroicons-chart-bar" class="w-5 h-5" />
                 Performance Metrics
               </h2>
@@ -259,31 +282,31 @@
             <div class="space-y-4">
               <div v-if="school.fsp_signals.avgHoursToPPL">
                 <div class="flex justify-between text-sm mb-1">
-                  <span class="text-gray-600 dark:text-gray-400">Avg. Hours to PPL</span>
-                  <span class="font-medium">{{ school.fsp_signals.avgHoursToPPL }}h</span>
+                  <span style="color: #6B7280;">Avg. Hours to PPL</span>
+                  <span class="font-medium" style="color: #004E89;">{{ school.fsp_signals.avgHoursToPPL }}h</span>
                 </div>
               </div>
 
               <div v-if="school.fsp_signals.fleetUtilization">
                 <div class="flex justify-between text-sm mb-1">
-                  <span class="text-gray-600 dark:text-gray-400">Fleet Utilization</span>
-                  <span class="font-medium">{{ school.fsp_signals.fleetUtilization }}%</span>
+                  <span style="color: #6B7280;">Fleet Utilization</span>
+                  <span class="font-medium" style="color: #004E89;">{{ school.fsp_signals.fleetUtilization }}%</span>
                 </div>
                 <UProgress 
-                  :value="school.fsp_signals.fleetUtilization" 
+                  :model-value="school.fsp_signals.fleetUtilization" 
                   :max="100"
-                  :color="school.fsp_signals.fleetUtilization > 75 ? 'success' : 'warning'"
+                  color="primary"
                   size="sm"
                 />
               </div>
 
               <div v-if="school.fsp_signals.passRateFirstAttempt">
                 <div class="flex justify-between text-sm mb-1">
-                  <span class="text-gray-600 dark:text-gray-400">Pass Rate (1st Attempt)</span>
-                  <span class="font-medium">{{ school.fsp_signals.passRateFirstAttempt }}%</span>
+                  <span style="color: #6B7280;">Pass Rate (1st Attempt)</span>
+                  <span class="font-medium" style="color: #004E89;">{{ school.fsp_signals.passRateFirstAttempt }}%</span>
                 </div>
                 <UProgress 
-                  :value="school.fsp_signals.passRateFirstAttempt" 
+                  :model-value="school.fsp_signals.passRateFirstAttempt" 
                   :max="100"
                   color="success"
                   size="sm"
@@ -292,15 +315,16 @@
 
               <div v-if="school.fsp_signals.studentSatisfaction">
                 <div class="flex justify-between text-sm mb-1">
-                  <span class="text-gray-600 dark:text-gray-400">Student Satisfaction</span>
-                  <span class="font-medium">{{ school.fsp_signals.studentSatisfaction.toFixed(1) }}/5.0</span>
+                  <span style="color: #6B7280;">Student Satisfaction</span>
+                  <span class="font-medium" style="color: #004E89;">{{ school.fsp_signals.studentSatisfaction.toFixed(1) }}/5.0</span>
                 </div>
                 <div class="flex items-center gap-1">
                   <UIcon 
                     v-for="i in 5" 
                     :key="i"
                     name="i-heroicons-star-solid"
-                    :class="i <= school.fsp_signals.studentSatisfaction ? 'text-yellow-400' : 'text-gray-300'"
+                    :class="i <= school.fsp_signals.studentSatisfaction ? 'text-yellow-400' : ''"
+                    :style="i <= school.fsp_signals.studentSatisfaction ? '' : 'color: #D1D5DB;'"
                     class="w-4 h-4"
                   />
                 </div>
@@ -308,31 +332,31 @@
 
               <div v-if="school.fsp_signals.avgTimeToComplete">
                 <div class="flex justify-between text-sm">
-                  <span class="text-gray-600 dark:text-gray-400">Avg. Time to Complete</span>
-                  <span class="font-medium">{{ school.fsp_signals.avgTimeToComplete }} months</span>
+                  <span style="color: #6B7280;">Avg. Time to Complete</span>
+                  <span class="font-medium" style="color: #004E89;">{{ school.fsp_signals.avgTimeToComplete }} months</span>
                 </div>
               </div>
             </div>
           </UCard>
 
           <!-- Quick Stats -->
-          <UCard>
+          <UCard variant="outline" class="bg-white" style="border: 2px solid rgba(0, 78, 137, 0.4); box-shadow: 0 4px 6px rgba(0, 78, 137, 0.1);">
             <template #header>
-              <h2 class="text-lg font-semibold">Quick Stats</h2>
+              <h2 class="text-lg font-semibold" style="color: #004E89;">Quick Stats</h2>
             </template>
 
             <div class="space-y-3">
               <div class="flex items-center justify-between">
-                <span class="text-sm text-gray-600 dark:text-gray-400">Instructors</span>
-                <span class="font-medium">{{ school.instructors_count || 0 }}</span>
+                <span class="text-sm" style="color: #6B7280;">Instructors</span>
+                <span class="font-medium" style="color: #004E89;">{{ school.instructors_count || 0 }}</span>
               </div>
               <div class="flex items-center justify-between">
-                <span class="text-sm text-gray-600 dark:text-gray-400">Programs</span>
-                <span class="font-medium">{{ school.programs?.length || 0 }}</span>
+                <span class="text-sm" style="color: #6B7280;">Programs</span>
+                <span class="font-medium" style="color: #004E89;">{{ school.programs?.length || 0 }}</span>
               </div>
               <div class="flex items-center justify-between">
-                <span class="text-sm text-gray-600 dark:text-gray-400">Aircraft</span>
-                <span class="font-medium">{{ school.fleet?.totalAircraft || 0 }}</span>
+                <span class="text-sm" style="color: #6B7280;">Aircraft</span>
+                <span class="font-medium" style="color: #004E89;">{{ school.fleet?.totalAircraft || 0 }}</span>
               </div>
             </div>
           </UCard>
@@ -341,18 +365,19 @@
     </div>
 
     <div v-else class="max-w-7xl mx-auto px-4 py-16 text-center">
-      <UIcon name="i-heroicons-exclamation-circle" class="w-16 h-16 mx-auto text-gray-400 mb-4" />
-      <h2 class="text-2xl font-semibold text-gray-700 dark:text-gray-300 mb-2">School Not Found</h2>
-      <p class="text-gray-500 dark:text-gray-400 mb-6">The requested school could not be found.</p>
-      <UButton to="/" icon="i-heroicons-arrow-left">Back to Search</UButton>
+      <UIcon name="i-heroicons-exclamation-circle" class="w-16 h-16 mx-auto mb-4" style="color: #9CA3AF;" />
+      <h2 class="text-2xl font-semibold mb-2" style="color: #004E89;">School Not Found</h2>
+      <p class="mb-6" style="color: #6B7280;">The requested school could not be found.</p>
+      <UButton to="/" icon="i-heroicons-arrow-left" style="background-color: #FF6B35; color: white;" class="font-semibold min-h-[44px] touch-manipulation">Back to Search</UButton>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
 import type { School, Program, TrustTier } from '~~/types/database'
-import { useSchools } from '~~/composables/useSchools'
-import { useTiers } from '~~/composables/useTiers'
+import { useSchools } from '~~/app/composables/useSchools'
+import { useTiers } from '~~/app/composables/useTiers'
+import SchoolMap from '~~/app/components/SchoolMap.vue'
 
 // Get route params
 const route = useRoute()

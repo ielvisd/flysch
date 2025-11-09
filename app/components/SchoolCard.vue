@@ -2,14 +2,15 @@
   <UCard 
     variant="outline"
     class="school-card cursor-pointer transition-all duration-200 bg-white"
-    style="border: 2px solid rgba(5, 74, 145, 0.4); box-shadow: 0 2px 4px rgba(5, 74, 145, 0.1);"
+    style="border: 2px solid rgba(0, 78, 137, 0.4); box-shadow: 0 2px 4px rgba(0, 78, 137, 0.1);"
     @click="navigateToSchool"
+    v-intersect="onIntersect"
   >
     <template #header>
       <div class="flex justify-between items-start gap-4">
         <div class="flex-1 min-w-0">
           <div class="flex items-center gap-2 mb-1">
-            <h3 class="text-lg font-semibold truncate" style="color: #054A91;">
+            <h3 class="text-lg font-semibold truncate" style="color: #004E89;">
               ✈️ {{ school.name }}
             </h3>
           </div>
@@ -21,7 +22,7 @@
         
         <UBadge 
           :color="tierColor"
-          variant="subtle"
+          :variant="school.trust_tier === 'Premier' || school.trust_tier === 'Verified' ? 'solid' : 'subtle'"
           size="sm"
           :icon="tierIcon"
           class="shrink-0"
@@ -64,11 +65,11 @@
           💰 Cost Range
         </p>
         <div class="flex items-baseline gap-2">
-          <span class="text-sm font-semibold" style="color: #054A91;">
+          <span class="text-sm font-semibold" style="color: #004E89;">
             {{ formatCurrency(costRange.min) }}
           </span>
           <span class="text-xs" style="color: #9CA3AF;">-</span>
-          <span class="text-sm font-semibold" style="color: #054A91;">
+          <span class="text-sm font-semibold" style="color: #004E89;">
             {{ formatCurrency(costRange.max) }}
           </span>
         </div>
@@ -98,14 +99,14 @@
       <div v-if="school.fsp_signals && school.fsp_signals.fleetUtilization" class="pt-2 border-t" style="border-color: #E5E7EB;">
         <div class="flex items-center justify-between text-xs">
           <span style="color: #6B7280;">Fleet Utilization</span>
-          <span class="font-medium" style="color: #054A91;">
+          <span class="font-medium" style="color: #004E89;">
             {{ school.fsp_signals.fleetUtilization }}%
           </span>
         </div>
         <UProgress 
-          :value="school.fsp_signals.fleetUtilization" 
+          :model-value="school.fsp_signals.fleetUtilization" 
           :max="100"
-          :color="school.fsp_signals.fleetUtilization > 75 ? 'success' : school.fsp_signals.fleetUtilization > 60 ? 'warning' : 'error'"
+          color="primary"
           size="xs"
           class="mt-1"
         />
@@ -124,7 +125,7 @@
           @click.stop="navigateToSchool"
           variant="solid"
           class="hover:opacity-90 transition-opacity font-semibold"
-          style="background-color: #FFF952; color: #054A91;"
+          style="background-color: #FF6B35; color: white;"
         >
           View Details
         </UButton>
@@ -194,21 +195,25 @@ const formatCurrency = (amount: number): string => {
 const navigateToSchool = () => {
   router.push(`/schools/${props.school.id}`)
 }
+
+// Lazy loading intersection observer
+const isVisible = ref(false)
+const onIntersect = (isIntersecting: boolean) => {
+  isVisible.value = isIntersecting
+}
 </script>
 
 <style scoped>
-@reference "../assets/css/main.css";
-
 .school-card {
-  @apply transition-transform duration-200;
+  transition: transform 0.2s ease;
 }
 
 .school-card:hover {
   transform: translateY(-0.25rem);
-  border-color: #28AFFA !important;
+  border-color: #1A659E !important;
   border-width: 3px !important;
-  box-shadow: 0 8px 16px rgba(40, 175, 250, 0.3) !important;
-  background: linear-gradient(to bottom, #ffffff 0%, rgba(40, 175, 250, 0.02) 100%);
+  box-shadow: 0 8px 16px rgba(26, 101, 158, 0.3) !important;
+  background: linear-gradient(to bottom, #ffffff 0%, rgba(26, 101, 158, 0.02) 100%);
 }
 </style>
 

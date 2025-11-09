@@ -2,16 +2,67 @@
 @import "tailwindcss";
 
 /* Custom Aviation-Themed Variables */
+@theme {
+  --font-sans: 'Poppins', sans-serif;
+}
+
 :root {
-  --color-sky-blue: #1E40AF;
-  --color-runway-orange: #F59E0B;
-  --color-verified-green: #10B981;
+  /* New Vibrant Color Palette */
+  --color-primary-light: #28AFFA; /* Sky blue - accents and highlights */
+  --color-primary-dark: #054A91; /* Navy blue - primary text, headers, main elements */
+  --color-accent-yellow-bright: #FFF952; /* Bright yellow - highlights and CTAs */
+  --color-accent-yellow-golden: #FFCE22; /* Golden yellow - secondary actions and badges */
+  --color-accent-red: #E71D36; /* Red - important actions, warnings, emphasis */
+  
+  /* Typography */
+  --font-family: 'Poppins', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  
+  /* Legacy support */
+  --color-primary: #054A91;
+  --color-secondary: #28AFFA;
+  --color-accent: #FFF952;
+  --color-bg-light: #F9FAFB; /* White/light gray instead of light blue */
+  --color-dark: #054A91;
+}
+
+/* Apply font family globally */
+body {
+  font-family: var(--font-family);
+}
+
+/* Ensure input borders are visible with color palette */
+input[type="text"],
+input[type="search"],
+input[type="email"],
+input[type="password"],
+textarea {
+  border: 3px solid #28AFFA !important;
+  background-color: rgba(40, 175, 250, 0.05) !important;
+  border-radius: 0.5rem !important;
+}
+
+input[type="text"]:focus,
+input[type="search"]:focus,
+input[type="email"]:focus,
+input[type="password"]:focus,
+textarea:focus {
+  border-color: #054A91 !important;
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(40, 175, 250, 0.3) !important;
+  background-color: rgba(40, 175, 250, 0.08) !important;
+}
+
+/* Ensure buttons have rounded corners */
+button,
+[role="button"],
+a[role="button"] {
+  border-radius: 0.5rem !important;
 }
 
 /* Dark mode adjustments for "night ops" feel */
 .dark {
-  --color-bg-primary: #0f172a;
-  --color-bg-secondary: #1e293b;
+  --color-bg-primary: #293241; /* Very Dark Blue */
+  --color-bg-secondary: #1F2F42;
 }
 
 /* Animation utilities for vue-mcp */
@@ -48,7 +99,29 @@
 
 @media (max-width: 768px) {
   .map-container {
-    height: 300px;
+    height: 250px;
+    min-height: 250px;
+  }
+}
+
+/* Mobile touch targets - ensure minimum 44x44px */
+@media (max-width: 768px) {
+  button,
+  a,
+  [role="button"],
+  input[type="checkbox"],
+  input[type="radio"] {
+    min-height: 44px;
+    min-width: 44px;
+  }
+  
+  /* Better spacing on mobile */
+  .space-y-4 > * + * {
+    margin-top: 1rem;
+  }
+  
+  .space-y-6 > * + * {
+    margin-top: 1.25rem;
   }
 }
 
@@ -62,10 +135,10 @@
   box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
 }
 
-/* Trust tier badge colors */
+/* Trust tier badge colors - Updated with new palette */
 .tier-premier {
   background: linear-gradient(135deg, #ffd700 0%, #ffed4e 100%);
-  color: #1e293b;
+  color: #293241;
 }
 
 .tier-verified {
@@ -74,8 +147,8 @@
 }
 
 .tier-community {
-  background: #60a5fa;
-  color: white;
+  background: var(--color-secondary); /* #98C1D9 */
+  color: var(--color-dark); /* #293241 */
 }
 
 .tier-unverified {

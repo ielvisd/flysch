@@ -35,6 +35,11 @@ export default defineEventHandler(async (event) => {
   })
 
   try {
+    // Check if schools already exist
+    const { count: existingCount } = await supabase
+      .from('schools')
+      .select('*', { count: 'exact', head: true })
+
     // Fetch real school data from various sources
     const realSchools = await fetchRealSchoolData()
     
@@ -44,10 +49,56 @@ export default defineEventHandler(async (event) => {
     // Combine and normalize
     const allSchools = [...realSchools, ...mockSchools]
     
-    // Insert into Supabase
+    // Validate data before inserting
+    const validatedSchools = allSchools.filter(school => {
+      if (!school.name || !school.location) {
+        console.warn('Skipping invalid school:', school.name)
+        return false
+      }
+      return true
+    })
+
+    if (validatedSchools.length === 0) {
+      throw createError({
+        statusCode: 400,
+        statusMessage: 'No valid schools to seed'
+      })
+    }
+
+    // Check for existing schools by name to avoid duplicates
+    const existingNames = new Set<string>()
+    if (existingCount && existingCount > 0) {
+      const { data: existing } = await supabase
+        .from('schools')
+        .select('name')
+      
+      existing?.forEach(school => {
+        if (school.name) existingNames.add(school.name)
+      })
+    }
+
+    // Filter out schools that already exist
+    const newSchools = validatedSchools.filter(school => 
+      !existingNames.has(school.name || '')
+    )
+
+    if (newSchools.length === 0) {
+      return {
+        success: true,
+        message: 'All schools already exist in database',
+        schools: existingCount || 0,
+        existing: existingCount || 0,
+        breakdown: {
+          real: realSchools.length,
+          mock: mockSchools.length
+        }
+      }
+    }
+
+    // Insert new schools into Supabase
     const { data, error } = await supabase
       .from('schools')
-      .insert(allSchools)
+      .insert(newSchools)
       .select()
 
     if (error) {
@@ -61,8 +112,9 @@ export default defineEventHandler(async (event) => {
 
     return {
       success: true,
-      message: `Successfully seeded ${allSchools.length} schools`,
+      message: `Successfully seeded ${validatedSchools.length} schools`,
       schools: data?.length || 0,
+      existing: existingCount || 0,
       breakdown: {
         real: realSchools.length,
         mock: mockSchools.length
