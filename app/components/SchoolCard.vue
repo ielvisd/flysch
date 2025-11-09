@@ -2,9 +2,18 @@
   <UCard 
     variant="outline"
     class="school-card cursor-pointer transition-all duration-200 bg-white"
-    style="border: 2px solid rgba(0, 78, 137, 0.4); box-shadow: 0 2px 4px rgba(0, 78, 137, 0.1);"
-    @click="navigateToSchool"
+    :style="{
+      border: '2px solid rgba(0, 78, 137, 0.4)',
+      boxShadow: '0 2px 4px rgba(0, 78, 137, 0.1)',
+      ...(swipe.isSwiping.value ? swipe.getTransformStyle.value : {})
+    }"
+    @click="handleClick"
+    @touchstart="swipe.handleTouchStart"
+    @touchmove="swipe.handleTouchMove"
+    @touchend="swipe.handleTouchEnd"
+    @touchcancel="swipe.handleTouchCancel"
     v-intersect="onIntersect"
+    :class="{ 'swiping': swipe.isSwiping.value }"
   >
     <template #header>
       <div class="flex justify-between items-start gap-4">
@@ -136,13 +145,28 @@
 
 <script setup lang="ts">
 import type { School } from '~~/types/database'
+import { useSwipe } from '~~/app/composables/useSwipe'
 
 interface Props {
   school: School
+  onSwipeLeft?: () => void
+  onSwipeRight?: () => void
 }
 
 const props = defineProps<Props>()
 const router = useRouter()
+
+// Swipe gesture handling
+const swipe = useSwipe({
+  onSwipeLeft: props.onSwipeLeft,
+  onSwipeRight: props.onSwipeRight,
+  threshold: 50,
+  velocityThreshold: 0.3,
+  preventVerticalScroll: true
+})
+
+// Track if we're in a swipe gesture to prevent click navigation
+const isSwipeGesture = ref(false)
 
 // Computed properties
 type NuxtUIColor = 'primary' | 'secondary' | 'success' | 'info' | 'warning' | 'error' | 'neutral'
@@ -192,8 +216,30 @@ const formatCurrency = (amount: number): string => {
   }).format(amount)
 }
 
+// Watch for swipe state changes
+watch(swipe.isSwiping, (swiping) => {
+  if (swiping) {
+    isSwipeGesture.value = true
+  } else {
+    // Reset after a short delay to allow swipe callbacks to execute
+    setTimeout(() => {
+      isSwipeGesture.value = false
+    }, 100)
+  }
+})
+
 const navigateToSchool = () => {
   router.push(`/schools/${props.school.id}`)
+}
+
+const handleClick = (e: MouseEvent) => {
+  // Prevent navigation if this was part of a swipe gesture
+  if (isSwipeGesture.value) {
+    e.preventDefault()
+    e.stopPropagation()
+    return
+  }
+  navigateToSchool()
 }
 
 // Lazy loading intersection observer
@@ -206,6 +252,10 @@ const onIntersect = (isIntersecting: boolean) => {
 <style scoped>
 .school-card {
   transition: transform 0.2s ease;
+  touch-action: pan-y; /* Allow vertical scrolling, but handle horizontal swipes */
+  user-select: none; /* Prevent text selection during swipe */
+  -webkit-user-select: none;
+  -webkit-tap-highlight-color: transparent;
 }
 
 .school-card:hover {
@@ -214,6 +264,30 @@ const onIntersect = (isIntersecting: boolean) => {
   border-width: 3px !important;
   box-shadow: 0 8px 16px rgba(26, 101, 158, 0.3) !important;
   background: linear-gradient(to bottom, #ffffff 0%, rgba(26, 101, 158, 0.02) 100%);
+}
+
+/* Disable hover effects during swipe */
+.school-card.swiping:hover {
+  transform: none;
+}
+
+/* Smooth swipe transitions */
+.school-card.swiping {
+  transition: transform 0.1s ease-out, opacity 0.1s ease-out;
+  will-change: transform, opacity;
+}
+
+/* Mobile-specific: Full width cards for better swipe experience */
+@media (max-width: 768px) {
+  .school-card {
+    width: 100%;
+    touch-action: pan-y pinch-zoom;
+  }
+  
+  /* Prevent accidental clicks during swipe */
+  .school-card.swiping {
+    pointer-events: auto;
+  }
 }
 </style>
 

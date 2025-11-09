@@ -164,28 +164,50 @@ a[role="button"] {
 }
 
 /* Light mode placeholder text - ensure dark text for readability */
+/* Using darker color (#4b5563) for better contrast on light backgrounds */
 input::placeholder,
 textarea::placeholder,
 input[type="text"]::placeholder,
 input[type="search"]::placeholder,
 input[type="email"]::placeholder,
 input[type="password"]::placeholder {
-  color: #6b7280 !important;
-  opacity: 0.8;
+  color: #4b5563 !important;
+  opacity: 1 !important;
 }
 
-/* Nuxt UI input placeholder styling for light mode */
+/* Nuxt UI input placeholder styling for light mode - more aggressive targeting */
 :not(.dark) input::placeholder,
-:not(.dark) textarea::placeholder {
-  color: #6b7280 !important;
+:not(.dark) textarea::placeholder,
+:not(.dark) input[type="text"]::placeholder,
+:not(.dark) input[type="search"]::placeholder,
+:not(.dark) input[type="email"]::placeholder,
+:not(.dark) input[type="password"]::placeholder {
+  color: #4b5563 !important;
+  opacity: 1 !important;
 }
 
 /* Deep selectors for Nuxt UI components - ensure placeholder is readable */
 :not(.dark) [class*="input"] input::placeholder,
 :not(.dark) [class*="Input"] input::placeholder,
-:not(.dark) input[class*="input"]::placeholder {
-  color: #6b7280 !important;
-  opacity: 0.8;
+:not(.dark) input[class*="input"]::placeholder,
+:not(.dark) [class*="UInput"] input::placeholder,
+:not(.dark) [class*="u-input"] input::placeholder {
+  color: #4b5563 !important;
+  opacity: 1 !important;
+}
+
+/* Target all possible input wrapper classes in Nuxt UI */
+:not(.dark) [class*="base"] input::placeholder,
+:not(.dark) [class*="wrapper"] input::placeholder,
+:not(.dark) [class*="form"] input::placeholder {
+  color: #4b5563 !important;
+  opacity: 1 !important;
+}
+
+/* Universal selector for any input placeholder in light mode */
+:not(.dark) * input::placeholder {
+  color: #4b5563 !important;
+  opacity: 1 !important;
 }
 
 /* Dark mode placeholder text */
@@ -193,6 +215,22 @@ input[type="password"]::placeholder {
 .dark textarea::placeholder {
   color: #94a3b8 !important;
   opacity: 0.8;
+}
+
+/* Fix navigation menu text visibility - ensure dark text in light mode menus */
+:not(.dark) [data-reka-collection-item] a,
+:not(.dark) [data-reka-collection-item] span,
+:not(.dark) [data-reka-collection-item] {
+  color: #004E89 !important;
+}
+
+/* But keep white text when in dark header */
+header [data-reka-collection-item] a,
+header [data-reka-collection-item] span,
+header [data-reka-collection-item],
+header nav a,
+header nav [data-reka-collection-item] a {
+  color: white !important;
 }
 
 /* Dark mode for UCheckbox labels specifically */

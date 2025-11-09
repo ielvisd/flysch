@@ -281,5 +281,25 @@ header :deep([role="navigation"] button[aria-current="page"]) {
   color: white !important;
   opacity: 1;
 }
+
+/* Fix for UNavigationMenu - ensure text is visible in all contexts */
+:deep([data-reka-collection-item]),
+:deep([data-reka-collection-item] a),
+:deep([data-reka-collection-item] span) {
+  color: #004E89 !important;
+}
+
+/* In header context, navigation should be white */
+header :deep([data-reka-collection-item]),
+header :deep([data-reka-collection-item] a),
+header :deep([data-reka-collection-item] span) {
+  color: white !important;
+}
+
+/* Ensure navigation links in header are always white */
+header nav :deep(a),
+header nav :deep([data-reka-collection-item] a) {
+  color: white !important;
+}
 </style>
 

@@ -289,11 +289,14 @@
           </div>
 
           <!-- Results Grid (Card View) -->
-          <div v-else-if="schools && schools.length > 0 && viewMode === 'cards'" class="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
+          <div v-else-if="schools && schools.length > 0 && viewMode === 'cards'" class="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6" ref="cardsContainer">
             <SchoolCard 
-              v-for="school in paginatedSchools" 
+              v-for="(school, index) in paginatedSchools" 
               :key="school.id"
               :school="school"
+              :ref="el => setCardRef(el, index)"
+              :on-swipe-left="() => navigateToNextCard(index)"
+              :on-swipe-right="() => navigateToPreviousCard(index)"
             />
           </div>
 
@@ -454,6 +457,8 @@ const pageSize = 10
 const sortBy = ref<string>('name')
 const sortOrder = ref<'asc' | 'desc'>('asc')
 const viewMode = ref<'cards' | 'table'>('cards')
+const cardsContainer = ref<HTMLElement | null>(null)
+const cardRefs = ref<Array<{ $el?: HTMLElement } | null>>([])
 
 // Options
 const programOptions = ['PPL', 'IR', 'CPL', 'CFI', 'CFII', 'MEI', 'ATP']
@@ -857,6 +862,57 @@ const clearFilters = () => {
   applyFilters()
 }
 
+// Card navigation for swipe gestures
+const setCardRef = (el: any, index: number) => {
+  if (el) {
+    cardRefs.value[index] = el
+  }
+}
+
+const navigateToNextCard = (currentIndex: number) => {
+  const nextIndex = currentIndex + 1
+  if (nextIndex < paginatedSchools.value.length) {
+    scrollToCard(nextIndex)
+  } else {
+    // If on last card of page, go to next page
+    if (currentPage.value * pageSize < sortedSchools.value.length) {
+      currentPage.value++
+      nextTick(() => {
+        scrollToCard(0)
+      })
+    }
+  }
+}
+
+const navigateToPreviousCard = (currentIndex: number) => {
+  const prevIndex = currentIndex - 1
+  if (prevIndex >= 0) {
+    scrollToCard(prevIndex)
+  } else {
+    // If on first card of page, go to previous page
+    if (currentPage.value > 1) {
+      currentPage.value--
+      nextTick(() => {
+        const lastIndex = paginatedSchools.value.length - 1
+        scrollToCard(lastIndex)
+      })
+    }
+  }
+}
+
+const scrollToCard = (index: number) => {
+  nextTick(() => {
+    const card = cardRefs.value[index]
+    if (card && card.$el) {
+      card.$el.scrollIntoView({
+        behavior: 'smooth',
+        block: 'nearest',
+        inline: 'nearest'
+      })
+    }
+  })
+}
+
 // Initial load
 onMounted(async () => {
   await fetchSchools()
@@ -1005,6 +1061,21 @@ onMounted(async () => {
 
 :deep(.page-hero .text-muted) {
   color: rgba(255, 255, 255, 0.9) !important;
+}
+
+/* Ensure placeholder text is dark and readable in light mode */
+:deep(input::placeholder),
+:deep(input[type="text"]::placeholder),
+:deep(input[type="search"]::placeholder) {
+  color: #4b5563 !important;
+  opacity: 1 !important;
+}
+
+/* Target Nuxt UI input components specifically */
+:deep([class*="input"] input::placeholder),
+:deep([class*="Input"] input::placeholder) {
+  color: #4b5563 !important;
+  opacity: 1 !important;
 }
 </style>
 
