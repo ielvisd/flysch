@@ -228,8 +228,8 @@
             </template>
           </ClientOnly>
 
-          <!-- Results Count and Sort -->
-          <div class="flex items-center justify-between mb-4">
+          <!-- Results Count, Sort, and View Toggle -->
+          <div class="flex items-center justify-between mb-4 flex-wrap gap-3">
             <div class="flex items-center gap-2">
               <h3 class="text-lg md:text-xl font-semibold flex items-center gap-2" style="color: #004E89;">
                 <span v-if="!loading">🎯</span>
@@ -239,16 +239,46 @@
                 {{ schools.length }} results
               </UBadge>
             </div>
-            <UButton 
-              leading-icon="i-heroicons-arrows-up-down"
-              variant="solid"
-              size="sm"
-              class="min-h-[44px] touch-manipulation"
-              style="background-color: #FF6B35; color: white;"
-            >
-              <span class="hidden sm:inline">Sort</span>
-              <span class="sm:hidden">Sort</span>
-            </UButton>
+            <div class="flex items-center gap-2">
+              <!-- View Toggle -->
+              <div class="flex items-center gap-1 border rounded-lg" style="border-color: rgba(0, 78, 137, 0.3);">
+                <UButton 
+                  :variant="viewMode === 'cards' ? 'solid' : 'ghost'"
+                  size="sm"
+                  icon="i-heroicons-squares-2x2"
+                  @click="viewMode = 'cards'"
+                  class="min-h-[44px] touch-manipulation rounded-r-none"
+                  :style="viewMode === 'cards' ? 'background-color: #FF6B35; color: white;' : ''"
+                  aria-label="Card view"
+                />
+                <UButton 
+                  :variant="viewMode === 'table' ? 'solid' : 'ghost'"
+                  size="sm"
+                  icon="i-heroicons-table-cells"
+                  @click="viewMode = 'table'"
+                  class="min-h-[44px] touch-manipulation rounded-l-none"
+                  :style="viewMode === 'table' ? 'background-color: #FF6B35; color: white;' : ''"
+                  aria-label="Table view"
+                />
+              </div>
+              <!-- Sort Dropdown -->
+              <UDropdownMenu 
+                :items="sortMenuItems"
+                :content="{ align: 'end' }"
+              >
+                <UButton 
+                  leading-icon="i-heroicons-arrows-up-down"
+                  trailing-icon="i-heroicons-chevron-down"
+                  variant="solid"
+                  size="sm"
+                  class="min-h-[44px] touch-manipulation"
+                  style="background-color: #FF6B35; color: white;"
+                >
+                  <span class="hidden sm:inline">Sort</span>
+                  <span class="sm:hidden">Sort</span>
+                </UButton>
+              </UDropdownMenu>
+            </div>
           </div>
 
           <!-- Loading State -->
@@ -261,13 +291,94 @@
             />
           </div>
 
-          <!-- Results Grid -->
-          <div v-else-if="schools && schools.length > 0" class="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
+          <!-- Results Grid (Card View) -->
+          <div v-else-if="schools && schools.length > 0 && viewMode === 'cards'" class="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
             <SchoolCard 
               v-for="school in paginatedSchools" 
               :key="school.id"
               :school="school"
             />
+          </div>
+
+          <!-- Results Table (Table View) -->
+          <div v-else-if="schools && schools.length > 0 && viewMode === 'table'" class="overflow-x-auto">
+            <UTable 
+              :data="sortedSchools"
+              :columns="tableColumns"
+              v-model:sort="tableSort"
+              :page-size="pageSize"
+              v-model:page="currentPage"
+              class="w-full"
+            >
+              <template #name-data="{ row }">
+                <div class="flex items-center gap-2">
+                  <NuxtLink 
+                    :to="`/schools/${row.original.id}`"
+                    class="font-semibold hover:underline"
+                    style="color: #004E89;"
+                  >
+                    {{ row.original.name }}
+                  </NuxtLink>
+                </div>
+              </template>
+
+              <template #location-data="{ row }">
+                <div class="flex items-center gap-1 text-sm" style="color: #6B7280;">
+                  <UIcon name="i-heroicons-map-pin" class="w-4 h-4" />
+                  <span>{{ row.original.city }}, {{ row.original.state }}</span>
+                </div>
+              </template>
+
+              <template #programs-data="{ row }">
+                <div class="flex flex-wrap gap-1">
+                  <UBadge 
+                    v-for="program in (row.original.programs?.slice(0, 3) || [])"
+                    :key="program.type"
+                    color="primary"
+                    variant="soft"
+                    size="xs"
+                  >
+                    {{ program.type }}
+                  </UBadge>
+                  <span v-if="(row.original.programs?.length || 0) > 3" class="text-xs" style="color: #6B7280;">
+                    +{{ (row.original.programs?.length || 0) - 3 }} more
+                  </span>
+                </div>
+              </template>
+
+              <template #cost-data="{ row }">
+                <div v-if="row.original.programs && row.original.programs.length > 0" class="text-sm">
+                  <span class="font-medium" style="color: #004E89;">
+                    ${{ Math.min(...row.original.programs.map((p: any) => p.minCost)).toLocaleString() }}k - 
+                    ${{ Math.max(...row.original.programs.map((p: any) => p.maxCost)).toLocaleString() }}k
+                  </span>
+                </div>
+                <span v-else class="text-sm" style="color: #9CA3AF;">N/A</span>
+              </template>
+
+              <template #tier-data="{ row }">
+                <UBadge 
+                  :color="getTierColor(row.original.trust_tier)"
+                  :variant="row.original.trust_tier === 'Premier' || row.original.trust_tier === 'Verified' ? 'solid' : 'subtle'"
+                  size="sm"
+                  :icon="getTierIcon(row.original.trust_tier)"
+                >
+                  {{ row.original.trust_tier }}
+                </UBadge>
+              </template>
+
+              <template #actions-data="{ row }">
+                <UButton 
+                  size="sm"
+                  variant="solid"
+                  @click="$router.push(`/schools/${row.original.id}`)"
+                  style="background-color: #FF6B35; color: white;"
+                  class="min-h-[36px] touch-manipulation"
+                >
+                  View Details
+                </UButton>
+              </template>
+            </UTable>
           </div>
 
           <!-- No Results -->
@@ -292,11 +403,11 @@
             </UButton>
           </div>
 
-          <!-- Pagination -->
-          <div v-if="schools && schools.length > pageSize" class="flex justify-center">
+          <!-- Pagination (only for card view, table has built-in pagination) -->
+          <div v-if="viewMode === 'cards' && sortedSchools && sortedSchools.length > pageSize" class="flex justify-center">
             <UPagination 
               v-model="currentPage"
-              :total="schools.length"
+              :total="sortedSchools.length"
               :page-size="pageSize"
             />
           </div>
@@ -307,8 +418,9 @@
 </template>
 
 <script setup lang="ts">
-import type { SchoolFilters } from '~~/types/database'
+import type { SchoolFilters, TrustTier } from '~~/types/database'
 import { useSchools } from '~~/app/composables/useSchools'
+import { useTiers } from '~~/app/composables/useTiers'
 import SchoolCard from '~~/app/components/SchoolCard.vue'
 import SchoolMap from '~~/app/components/SchoolMap.vue'
 
@@ -325,7 +437,8 @@ useHead({
 })
 
 // Composables
-const { fetchSchools, schools, loading } = useSchools()
+const { fetchSchools, schools, loading, calculateDistance, parseLocation } = useSchools()
+const { getTierColor, getTierIcon } = useTiers()
 const { coords, error: geoError } = useGeolocation()
 
 // State
@@ -338,6 +451,9 @@ const budgetRange = ref('all')
 const detectingLocation = ref(false)
 const currentPage = ref(1)
 const pageSize = 10
+const sortBy = ref<string>('name')
+const sortOrder = ref<'asc' | 'desc'>('asc')
+const viewMode = ref<'cards' | 'table'>('cards')
 
 // Options
 const programOptions = ['PPL', 'IR', 'CPL', 'CFI', 'CFII', 'MEI', 'ATP']
@@ -350,14 +466,218 @@ const budgetOptions = [
   { label: 'Over $25,000', value: 'over-25k' }
 ]
 
-// Computed
-const paginatedSchools = computed(() => {
+// Sort menu items
+const sortMenuItems = computed(() => {
+  const items: any[] = [
+    [{
+      label: 'Name (A-Z)',
+      icon: sortBy.value === 'name' && sortOrder.value === 'asc' ? 'i-heroicons-check' : undefined,
+      click: () => {
+        sortBy.value = 'name'
+        sortOrder.value = 'asc'
+      }
+    }, {
+      label: 'Name (Z-A)',
+      icon: sortBy.value === 'name' && sortOrder.value === 'desc' ? 'i-heroicons-check' : undefined,
+      click: () => {
+        sortBy.value = 'name'
+        sortOrder.value = 'desc'
+      }
+    }],
+    [{
+      label: 'Cost (Low to High)',
+      icon: sortBy.value === 'cost' && sortOrder.value === 'asc' ? 'i-heroicons-check' : undefined,
+      click: () => {
+        sortBy.value = 'cost'
+        sortOrder.value = 'asc'
+      }
+    }, {
+      label: 'Cost (High to Low)',
+      icon: sortBy.value === 'cost' && sortOrder.value === 'desc' ? 'i-heroicons-check' : undefined,
+      click: () => {
+        sortBy.value = 'cost'
+        sortOrder.value = 'desc'
+      }
+    }]
+  ]
+
+  // Add distance sort only if location filter is active
+  if (filters.value.location) {
+    items.push([{
+      label: 'Distance (Nearest)',
+      icon: sortBy.value === 'distance' && sortOrder.value === 'asc' ? 'i-heroicons-check' : undefined,
+      click: () => {
+        sortBy.value = 'distance'
+        sortOrder.value = 'asc'
+      }
+    }, {
+      label: 'Distance (Farthest)',
+      icon: sortBy.value === 'distance' && sortOrder.value === 'desc' ? 'i-heroicons-check' : undefined,
+      click: () => {
+        sortBy.value = 'distance'
+        sortOrder.value = 'desc'
+      }
+    }])
+  }
+
+  items.push([{
+    label: 'Trust Tier',
+    icon: sortBy.value === 'tier' ? 'i-heroicons-check' : undefined,
+    click: () => {
+      sortBy.value = 'tier'
+      sortOrder.value = 'asc'
+    }
+  }])
+
+  return items
+})
+
+// Table sort state (for built-in table sorting)
+const tableSort = ref<Array<{ id: string; direction: 'asc' | 'desc' }>>([{ id: 'name', direction: 'asc' }])
+
+// Table columns configuration
+const tableColumns = computed(() => [
+  {
+    id: 'name',
+    key: 'name',
+    label: 'School Name',
+    sortable: true,
+    accessorFn: (row: any) => row.name
+  },
+  {
+    id: 'location',
+    key: 'location',
+    label: 'Location',
+    accessorFn: (row: any) => `${row.city}, ${row.state}`
+  },
+  {
+    id: 'programs',
+    key: 'programs',
+    label: 'Programs',
+    accessorFn: (row: any) => row.programs?.map((p: any) => p.type).join(', ') || ''
+  },
+  {
+    id: 'cost',
+    key: 'cost',
+    label: 'Cost Range',
+    sortable: true,
+    accessorFn: (row: any) => {
+      if (!row.programs || row.programs.length === 0) return Infinity
+      return Math.min(...row.programs.map((p: any) => p.minCost))
+    }
+  },
+  {
+    id: 'tier',
+    key: 'tier',
+    label: 'Trust Tier',
+    sortable: true,
+    accessorFn: (row: any) => {
+      const tierOrder: Record<string, number> = {
+        'Premier': 4,
+        'Verified': 3,
+        'Community': 2,
+        'Unverified': 1
+      }
+      return tierOrder[row.trust_tier] || 0
+    }
+  },
+  {
+    id: 'actions',
+    key: 'actions',
+    label: 'Actions'
+  }
+])
+
+// Computed - Sort schools (for card view and dropdown sort)
+const sortedSchools = computed(() => {
   if (!schools.value || schools.value.length === 0) {
+    return []
+  }
+
+  // If using table view, let the table handle sorting
+  if (viewMode.value === 'table') {
+    return schools.value
+  }
+
+  // For card view, apply custom sorting
+  const sorted = [...schools.value]
+
+  sorted.sort((a, b) => {
+    let comparison = 0
+
+    switch (sortBy.value) {
+      case 'name':
+        comparison = a.name.localeCompare(b.name)
+        break
+
+      case 'cost': {
+        const aMinCost = Math.min(...(a.programs?.map(p => p.minCost) || [Infinity]))
+        const bMinCost = Math.min(...(b.programs?.map(p => p.minCost) || [Infinity]))
+        comparison = aMinCost - bMinCost
+        break
+      }
+
+      case 'distance': {
+        if (!filters.value.location) {
+          comparison = 0
+          break
+        }
+        const aPoint = parseLocation(a.location)
+        const bPoint = parseLocation(b.location)
+        
+        if (!aPoint) return 1
+        if (!bPoint) return -1
+        
+        const aDistance = calculateDistance(
+          filters.value.location.lat,
+          filters.value.location.lng,
+          aPoint.lat,
+          aPoint.lng
+        )
+        const bDistance = calculateDistance(
+          filters.value.location.lat,
+          filters.value.location.lng,
+          bPoint.lat,
+          bPoint.lng
+        )
+        comparison = aDistance - bDistance
+        break
+      }
+
+      case 'tier': {
+        const tierOrder: Record<string, number> = {
+          'Premier': 4,
+          'Verified': 3,
+          'Community': 2,
+          'Unverified': 1
+        }
+        comparison = (tierOrder[b.trust_tier] || 0) - (tierOrder[a.trust_tier] || 0)
+        break
+      }
+
+      default:
+        comparison = 0
+    }
+
+    return sortOrder.value === 'asc' ? comparison : -comparison
+  })
+
+  return sorted
+})
+
+// Computed - Paginate sorted schools (for card view)
+const paginatedSchools = computed(() => {
+  if (viewMode.value === 'table') {
+    // Table handles its own pagination
+    return []
+  }
+  
+  if (!sortedSchools.value || sortedSchools.value.length === 0) {
     return []
   }
   const start = (currentPage.value - 1) * pageSize
   const end = start + pageSize
-  return schools.value.slice(start, end)
+  return sortedSchools.value.slice(start, end)
 })
 
 
@@ -401,6 +721,40 @@ watch(budgetRange, (newRange) => {
   }
 })
 
+// Sync table sort with dropdown sort when in table view
+watch([sortBy, sortOrder], ([newSortBy, newSortOrder]) => {
+  if (viewMode.value === 'table') {
+    const direction = newSortOrder === 'asc' ? 'asc' : 'desc'
+    // Map our sort keys to table column keys
+    const columnMap: Record<string, string> = {
+      'name': 'name',
+      'cost': 'cost',
+      'tier': 'tier',
+      'distance': 'location' // Distance uses location column
+    }
+    const columnKey = columnMap[newSortBy] || 'name'
+    tableSort.value = [{ id: columnKey, direction }]
+  }
+})
+
+// Sync dropdown sort with table sort when table sort changes
+watch(tableSort, (newSort) => {
+  if (viewMode.value === 'table' && newSort.length > 0) {
+    const sort = newSort[0]
+    if (!sort) return
+    // Map table column keys back to our sort keys
+    const keyMap: Record<string, string> = {
+      'name': 'name',
+      'cost': 'cost',
+      'tier': 'tier',
+      'location': 'distance'
+    }
+    const mappedKey = keyMap[sort.id] || 'name'
+    sortBy.value = mappedKey
+    sortOrder.value = sort.direction
+  }
+})
+
 // Methods
 const applyFilters = async () => {
   await fetchSchools(filters.value)
@@ -440,6 +794,9 @@ const clearFilters = () => {
   selectedTrainingTypes.value = []
   budgetRange.value = 'all'
   currentPage.value = 1
+  sortBy.value = 'name'
+  sortOrder.value = 'asc'
+  tableSort.value = [{ id: 'name', direction: 'asc' }]
   applyFilters()
 }
 
@@ -479,6 +836,60 @@ onMounted(async () => {
   .touch-manipulation {
     touch-action: manipulation;
     -webkit-tap-highlight-color: transparent;
+  }
+
+  /* Table responsive styling */
+  :deep(.u-table) {
+    font-size: 0.875rem;
+  }
+
+  :deep(.u-table th),
+  :deep(.u-table td) {
+    padding: 0.5rem;
+  }
+
+  /* Stack table columns on very small screens */
+  @media (max-width: 640px) {
+    :deep(.u-table) {
+      display: block;
+    }
+
+    :deep(.u-table thead) {
+      display: none;
+    }
+
+    :deep(.u-table tbody) {
+      display: block;
+    }
+
+    :deep(.u-table tr) {
+      display: block;
+      margin-bottom: 1rem;
+      border: 2px solid rgba(0, 78, 137, 0.2);
+      border-radius: 0.5rem;
+      padding: 0.75rem;
+      background: white;
+    }
+
+    :deep(.u-table td) {
+      display: block;
+      text-align: left;
+      padding: 0.5rem 0;
+      border: none;
+      border-bottom: 1px solid rgba(0, 78, 137, 0.1);
+    }
+
+    :deep(.u-table td:before) {
+      content: attr(data-label);
+      font-weight: 600;
+      display: block;
+      margin-bottom: 0.25rem;
+      color: #004E89;
+    }
+
+    :deep(.u-table td:last-child) {
+      border-bottom: none;
+    }
   }
 }
 
