@@ -15,18 +15,24 @@ interface RealSchoolData {
 export default defineEventHandler(async (event) => {
   const config = useRuntimeConfig()
   
-  // Create Supabase client for server-side use
+  // Create Supabase client with service role key (bypasses RLS for seeding)
   const supabaseUrl = config.public.supabaseUrl
-  const supabaseAnonKey = config.public.supabaseAnonKey
+  const supabaseServiceRoleKey = config.supabaseServiceRoleKey
   
-  if (!supabaseUrl || !supabaseAnonKey) {
+  if (!supabaseUrl || !supabaseServiceRoleKey) {
     throw createError({
       statusCode: 500,
-      statusMessage: 'Supabase configuration missing'
+      statusMessage: 'Supabase configuration missing. Make sure SUPABASE_SERVICE_ROLE_KEY is set in your .env file.'
     })
   }
 
-  const supabase = createClient(supabaseUrl, supabaseAnonKey)
+  // Use service role key to bypass RLS for seeding operations
+  const supabase = createClient(supabaseUrl, supabaseServiceRoleKey, {
+    auth: {
+      persistSession: false,
+      autoRefreshToken: false
+    }
+  })
 
   try {
     // Fetch real school data from various sources
