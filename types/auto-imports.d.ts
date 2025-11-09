@@ -4,9 +4,12 @@
 import type { School, SchoolFilters } from '~~/types/database'
 import type { MatchInputs, MatchSession } from '~~/types/database'
 import type { TrustTier } from '~~/types/database'
+import type { SupabaseClient } from '@supabase/supabase-js'
 
 declare global {
   // Composables from composables/ directory
+  function useSupabase(): SupabaseClient
+  
   function useSchools(): {
     schools: import('vue').ComputedRef<School[]>
     loading: import('vue').ComputedRef<boolean>

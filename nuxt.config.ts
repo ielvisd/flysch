@@ -22,6 +22,17 @@ export default defineNuxtConfig({
     }
   },
 
+  // Debug: Log env vars at build time (server-side only)
+  hooks: {
+    'build:before': () => {
+      console.log('[Nuxt Config] Environment check:', {
+        hasSupabaseUrl: !!process.env.SUPABASE_URL,
+        hasSupabaseAnonKey: !!process.env.SUPABASE_ANON_KEY,
+        urlPreview: process.env.SUPABASE_URL ? `${process.env.SUPABASE_URL.substring(0, 30)}...` : 'NOT SET'
+      })
+    }
+  },
+
   app: {
     head: {
       title: 'Flysch - Find Your Perfect Flight School',

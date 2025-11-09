@@ -1,4 +1,5 @@
 import OpenAI from 'openai'
+import { createClient } from '@supabase/supabase-js'
 // @ts-ignore - Server file type resolution
 import type { MatchInputs, MatchSession, School, Program, ProgramType, TrustTier } from '../../types/database'
 
@@ -15,10 +16,20 @@ export default defineEventHandler(async (event) => {
   }
 
   try {
-    // Get candidate schools from database
-    const { $supabase } = event.context
+    // Create Supabase client for server-side use
+    const supabaseUrl = config.public.supabaseUrl
+    const supabaseAnonKey = config.public.supabaseAnonKey
     
-    let query = $supabase
+    if (!supabaseUrl || !supabaseAnonKey) {
+      throw createError({
+        statusCode: 500,
+        statusMessage: 'Supabase configuration missing'
+      })
+    }
+
+    const supabase = createClient(supabaseUrl, supabaseAnonKey)
+    
+    let query = supabase
       .from('schools')
       .select('*')
 

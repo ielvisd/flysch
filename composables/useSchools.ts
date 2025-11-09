@@ -1,39 +1,40 @@
 import type { School, SchoolFilters, Program } from '~~/types/database'
+import { useSupabase } from './useSupabase'
 
 /**
  * Composable for managing school data and queries
  */
 export const useSchools = () => {
-  const nuxtApp = useNuxtApp()
-  const $supabase = nuxtApp.$supabase as any // Type assertion for Supabase client
   const toast = useToast()
+  
+  // Lazy initialization of Supabase client (client-side only)
+  const getSupabase = () => {
+    if (process.server) {
+      throw new Error('Supabase operations must be performed on the client-side')
+    }
+    return useSupabase()
+  }
   
   // Global state for caching schools
   const schoolsCache = useState<School[]>('schools-cache', () => [])
   const loading = useState<boolean>('schools-loading', () => false)
-  const error = useState<Error | null>('schools-error', () => null)
+  const error = useState<{ message: string; code?: string } | null>('schools-error', () => null)
 
   /**
    * Fetch schools with filters
    */
   const fetchSchools = async (filters?: SchoolFilters) => {
+    if (process.server) {
+      console.warn('fetchSchools cannot run on server-side')
+      return []
+    }
+    
     loading.value = true
     error.value = null
 
     try {
-      if (!$supabase) {
-        const errorMsg = 'Supabase client not initialized. Schools are stored in the database. Please:\n1. Set SUPABASE_URL and SUPABASE_ANON_KEY in your .env file\n2. Run the seed endpoint (/api/seed) to populate schools data'
-        console.error(errorMsg)
-        toast.add({
-          title: 'Database Connection Required',
-          description: 'Schools are stored in Supabase. Please configure your environment variables and seed the database.',
-          color: 'error',
-          timeout: 10000
-        })
-        throw new Error(errorMsg)
-      }
-
-      let query = $supabase
+      const supabase = getSupabase()
+      let query = supabase
         .from('schools')
         .select('*')
         .order('name', { ascending: true })
@@ -102,7 +103,10 @@ export const useSchools = () => {
 
     } catch (err) {
       console.error('Error fetching schools:', err)
-      error.value = err as Error
+      error.value = {
+        message: err instanceof Error ? err.message : 'An unknown error occurred',
+        code: err instanceof Error && 'code' in err ? String(err.code) : undefined
+      }
       toast.add({
         title: 'Error Loading Schools',
         description: 'Failed to load flight schools. Please try again.',
@@ -118,17 +122,17 @@ export const useSchools = () => {
    * Fetch a single school by ID
    */
   const fetchSchool = async (id: string): Promise<School | null> => {
+    if (process.server) {
+      console.warn('fetchSchool cannot run on server-side')
+      return null
+    }
+    
     loading.value = true
     error.value = null
 
     try {
-      if (!$supabase) {
-        const errorMsg = 'Supabase client not initialized. Please check your environment variables.'
-        console.error(errorMsg)
-        throw new Error(errorMsg)
-      }
-
-      const { data, error: fetchError } = await $supabase
+      const supabase = getSupabase()
+      const { data, error: fetchError } = await supabase
         .from('schools')
         .select('*')
         .eq('id', id)
@@ -141,7 +145,10 @@ export const useSchools = () => {
       return data
     } catch (err) {
       console.error('Error fetching school:', err)
-      error.value = err as Error
+      error.value = {
+        message: err instanceof Error ? err.message : 'An unknown error occurred',
+        code: err instanceof Error && 'code' in err ? String(err.code) : undefined
+      }
       toast.add({
         title: 'School Not Found',
         description: 'The requested school could not be found.',
@@ -157,12 +164,13 @@ export const useSchools = () => {
    * Subscribe to real-time updates for a school
    */
   const subscribeToSchool = (schoolId: string, callback: (school: School) => void) => {
-    if (!$supabase) {
-      console.error('Supabase client not initialized')
+    if (process.server) {
+      console.warn('subscribeToSchool cannot run on server-side')
       return () => {}
     }
-
-    const channel = $supabase
+    
+    const supabase = getSupabase()
+    const channel = supabase
       .channel(`school:${schoolId}`)
       .on(
         'postgres_changes',

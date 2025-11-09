@@ -108,6 +108,8 @@
 </template>
 
 <script setup lang="ts">
+import { useSupabase } from '../../composables/useSupabase'
+
 // Meta
 useHead({
   title: 'Sign In',
@@ -121,10 +123,9 @@ definePageMeta({
 })
 
 // Composables
-const nuxtApp = useNuxtApp()
-const $supabase = nuxtApp.$supabase as any // Type assertion for Supabase client
 const router = useRouter()
 const toast = useToast()
+const supabase = ref<ReturnType<typeof useSupabase> | null>(null)
 
 // State
 const isSignUp = ref(false)
@@ -138,12 +139,14 @@ const form = ref({
 
 // Methods
 const handleSubmit = async () => {
+  if (!supabase.value) return
+  
   loading.value = true
 
   try {
     if (isSignUp.value) {
       // Sign up
-      const { data, error } = await $supabase.auth.signUp({
+      const { data, error } = await supabase.value.auth.signUp({
         email: form.value.email,
         password: form.value.password
       })
@@ -158,7 +161,7 @@ const handleSubmit = async () => {
 
       // Create user profile
       if (data.user) {
-        await $supabase.from('user_profiles').insert({
+        await supabase.value.from('user_profiles').insert({
           id: data.user.id,
           role: 'student',
           full_name: form.value.email.split('@')[0]
@@ -171,7 +174,7 @@ const handleSubmit = async () => {
 
     } else {
       // Sign in
-      const { data, error } = await $supabase.auth.signInWithPassword({
+      const { data, error } = await supabase.value.auth.signInWithPassword({
         email: form.value.email,
         password: form.value.password
       })
@@ -200,6 +203,8 @@ const handleSubmit = async () => {
 }
 
 const demoSignIn = async (type: 'student' | 'school') => {
+  if (!supabase.value) return
+  
   demoLoading.value = type
 
   try {
@@ -217,14 +222,14 @@ const demoSignIn = async (type: 'student' | 'school') => {
     const { email, password } = credentials[type]
 
     // Try to sign in
-    const { error } = await $supabase.auth.signInWithPassword({
+    const { error } = await supabase.value.auth.signInWithPassword({
       email,
       password
     })
 
     if (error) {
       // If sign in fails, try to sign up
-      const { data: signUpData, error: signUpError } = await $supabase.auth.signUp({
+      const { data: signUpData, error: signUpError } = await supabase.value.auth.signUp({
         email,
         password
       })
@@ -233,7 +238,7 @@ const demoSignIn = async (type: 'student' | 'school') => {
 
       // Create demo profile
       if (signUpData.user) {
-        await $supabase.from('user_profiles').insert({
+        await supabase.value.from('user_profiles').insert({
           id: signUpData.user.id,
           role: type === 'student' ? 'student' : 'school',
           full_name: type === 'student' ? 'Demo Student' : 'Demo School'
@@ -241,7 +246,7 @@ const demoSignIn = async (type: 'student' | 'school') => {
       }
 
       // Try signing in again
-      const { error: retryError } = await $supabase.auth.signInWithPassword({
+      const { error: retryError } = await supabase.value.auth.signInWithPassword({
         email,
         password
       })
@@ -272,7 +277,10 @@ const demoSignIn = async (type: 'student' | 'school') => {
 
 // Check if already signed in
 onMounted(async () => {
-  const { data: { session } } = await $supabase.auth.getSession()
+  // Initialize Supabase client on client-side only
+  supabase.value = useSupabase()
+  
+  const { data: { session } } = await supabase.value.auth.getSession()
   if (session) {
     router.push('/')
   }

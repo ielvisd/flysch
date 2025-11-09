@@ -1,3 +1,4 @@
+import { createClient } from '@supabase/supabase-js'
 // @ts-ignore - Server file type resolution
 import type { School, Program, Fleet, TrustTier } from '../../types/database'
 
@@ -12,7 +13,20 @@ interface RealSchoolData {
 }
 
 export default defineEventHandler(async (event) => {
-  const { $supabase } = event.context
+  const config = useRuntimeConfig()
+  
+  // Create Supabase client for server-side use
+  const supabaseUrl = config.public.supabaseUrl
+  const supabaseAnonKey = config.public.supabaseAnonKey
+  
+  if (!supabaseUrl || !supabaseAnonKey) {
+    throw createError({
+      statusCode: 500,
+      statusMessage: 'Supabase configuration missing'
+    })
+  }
+
+  const supabase = createClient(supabaseUrl, supabaseAnonKey)
 
   try {
     // Fetch real school data from various sources
@@ -25,7 +39,7 @@ export default defineEventHandler(async (event) => {
     const allSchools = [...realSchools, ...mockSchools]
     
     // Insert into Supabase
-    const { data, error } = await $supabase
+    const { data, error } = await supabase
       .from('schools')
       .insert(allSchools)
       .select()

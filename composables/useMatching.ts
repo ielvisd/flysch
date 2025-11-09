@@ -1,17 +1,24 @@
 import type { MatchInputs, MatchSession, School, Program, TrustTier } from '~~/types/database'
+import { useSupabase } from './useSupabase'
 
 /**
  * Composable for AI-powered school matching
  */
 export const useMatching = () => {
-  const nuxtApp = useNuxtApp()
-  const $supabase = nuxtApp.$supabase as any // Type assertion for Supabase client
   const toast = useToast()
+  
+  // Lazy initialization of Supabase client (client-side only)
+  const getSupabase = () => {
+    if (process.server) {
+      throw new Error('Supabase operations must be performed on the client-side')
+    }
+    return useSupabase()
+  }
 
   // Global state for match results
   const matchResults = useState<MatchSession | null>('match-results', () => null)
   const matchLoading = useState<boolean>('match-loading', () => false)
-  const matchError = useState<Error | null>('match-error', () => null)
+  const matchError = useState<{ message: string; code?: string } | null>('match-error', () => null)
 
   // Quiz state for persistence
   const quizInputs = useState<Partial<MatchInputs>>('quiz-inputs', () => ({}))
@@ -33,14 +40,12 @@ export const useMatching = () => {
 
       matchResults.value = result
       
-      // Save to Supabase
-      if (!$supabase) {
-        throw new Error('Supabase client not initialized. Please check your environment variables.')
-      }
-
-      const { error: saveError } = await $supabase
-        .from('match_sessions')
-        .insert({
+      // Save to Supabase (client-side only)
+      if (process.client) {
+        const supabase = getSupabase()
+        const { error: saveError } = await supabase
+          .from('match_sessions')
+          .insert({
           inputs,
           ranked_schools: result.ranked_schools,
           match_scores: result.match_scores,
@@ -48,8 +53,9 @@ export const useMatching = () => {
           completed_at: new Date().toISOString()
         })
 
-      if (saveError) {
-        console.error('Error saving match session:', saveError)
+        if (saveError) {
+          console.error('Error saving match session:', saveError)
+        }
       }
 
       toast.add({
@@ -62,7 +68,10 @@ export const useMatching = () => {
 
     } catch (err) {
       console.error('Matching error:', err)
-      matchError.value = err as Error
+      matchError.value = {
+        message: err instanceof Error ? err.message : 'An unknown error occurred',
+        code: err instanceof Error && 'code' in err ? String(err.code) : undefined
+      }
       
       toast.add({
         title: 'Matching Failed',
@@ -81,13 +90,15 @@ export const useMatching = () => {
    * Fallback rule-based matching if AI fails
    */
   const runFallbackMatching = async (inputs: MatchInputs): Promise<MatchSession | null> => {
+    if (process.server) {
+      console.warn('Fallback matching cannot run on server-side')
+      return null
+    }
+    
     try {
-      if (!$supabase) {
-        throw new Error('Supabase client not initialized. Please check your environment variables.')
-      }
-
       // Get candidate schools from Supabase
-      const { data: schools, error } = await $supabase
+      const supabase = getSupabase()
+      const { data: schools, error } = await supabase
         .from('schools')
         .select('*')
 
@@ -235,12 +246,14 @@ Consider visiting the top 3-5 schools to compare facilities, meet instructors, a
    * Get previous match sessions
    */
   const getMatchHistory = async (userId?: string): Promise<MatchSession[]> => {
+    if (process.server) {
+      console.warn('getMatchHistory cannot run on server-side')
+      return []
+    }
+    
     try {
-      if (!$supabase) {
-        throw new Error('Supabase client not initialized. Please check your environment variables.')
-      }
-
-      let query = $supabase
+      const supabase = getSupabase()
+      let query = supabase
         .from('match_sessions')
         .select('*')
         .order('created_at', { ascending: false })

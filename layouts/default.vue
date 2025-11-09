@@ -201,8 +201,8 @@
 </template>
 
 <script setup lang="ts">
-const nuxtApp = useNuxtApp()
-const $supabase = nuxtApp.$supabase as any // Type assertion for Supabase client
+import { useSupabase } from '../composables/useSupabase'
+
 const colorMode = useColorMode()
 const toast = useToast()
 const router = useRouter()
@@ -210,6 +210,7 @@ const router = useRouter()
 // State
 const mobileMenuOpen = ref(false)
 const user = ref<any>(null)
+const supabase = ref<ReturnType<typeof useSupabase> | null>(null)
 
 // Computed
 const isDark = computed(() => colorMode.value === 'dark')
@@ -240,8 +241,10 @@ const toggleDarkMode = () => {
 }
 
 const handleSignOut = async () => {
+  if (!supabase.value) return
+  
   try {
-    await $supabase.auth.signOut()
+    await supabase.value.auth.signOut()
     user.value = null
     mobileMenuOpen.value = false
     
@@ -262,13 +265,16 @@ const handleSignOut = async () => {
 
 // Load user session
 onMounted(async () => {
-  const { data: { session } } = await $supabase.auth.getSession()
+  // Initialize Supabase client on client-side only
+  supabase.value = useSupabase()
+  
+  const { data: { session } } = await supabase.value.auth.getSession()
   if (session) {
     user.value = session.user
   }
 
   // Listen for auth changes
-  $supabase.auth.onAuthStateChange((_event, session) => {
+  supabase.value.auth.onAuthStateChange((_event, session) => {
     user.value = session?.user || null
   })
 })
