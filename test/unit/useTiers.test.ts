@@ -66,7 +66,7 @@ describe('useTiers composable', () => {
     const verifiedIcon = tiers.getTierIcon('Verified')
 
     expect(premierIcon).toContain('star')
-    expect(verifiedIcon).toContain('shield-check')
+    expect(verifiedIcon).toContain('check-badge')
   })
 
   it('should return tier description', () => {

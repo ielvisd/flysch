@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { useMatching } from '~/app/composables/useMatching'
 import type { MatchInputs, School, Program } from '~/types/database'
 
 // Mock Supabase client
@@ -22,16 +23,6 @@ const mockSupabaseClient = {
 vi.mock('~/app/composables/useSupabase', () => ({
   useSupabase: () => mockSupabaseClient
 }))
-
-// Mock useToast
-vi.mock('#app', () => ({
-  useToast: () => ({
-    add: vi.fn()
-  })
-}))
-
-// Mock $fetch
-global.$fetch = vi.fn()
 
 describe('useMatching composable', () => {
   const mockMatchInputs: MatchInputs = {

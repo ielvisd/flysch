@@ -4,12 +4,6 @@
   "devCommand": "npm run dev",
   "installCommand": "npm install",
   "framework": "nuxtjs",
-  "regions": ["iad1"],
-  "env": {
-    "NUXT_PUBLIC_SUPABASE_URL": "@supabase_url",
-    "NUXT_PUBLIC_SUPABASE_ANON_KEY": "@supabase_anon_key",
-    "SUPABASE_SERVICE_ROLE_KEY": "@supabase_service_role_key",
-    "OPENAI_API_KEY": "@openai_api_key"
-  }
+  "regions": ["iad1"]
 }
 

@@ -217,3 +217,10 @@ const onIntersect = (isIntersecting: boolean) => {
 }
 </style>
 
+<style>
+.dark .school-card:hover {
+  background: linear-gradient(to bottom, #334155 0%, rgba(26, 101, 158, 0.15) 100%) !important;
+  box-shadow: 0 8px 16px rgba(26, 101, 158, 0.4) !important;
+}
+</style>
+
