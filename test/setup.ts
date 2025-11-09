@@ -27,12 +27,22 @@ global.computed = vueComputed
 // Mock $fetch
 global.$fetch = vi.fn()
 
-// Mock process.client for localStorage tests
+// Mock process.client and process.server for tests
 if (typeof process !== 'undefined') {
   process.client = true
+  process.server = false
 } else {
-  (global as any).process = { client: true }
+  (global as any).process = { client: true, server: false }
 }
+
+// Mock localStorage
+const localStorageMock = {
+  getItem: vi.fn(),
+  setItem: vi.fn(),
+  removeItem: vi.fn(),
+  clear: vi.fn()
+}
+global.localStorage = localStorageMock as any
 
 // Type declarations for TypeScript
 declare global {

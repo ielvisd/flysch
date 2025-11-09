@@ -19,7 +19,7 @@
 
           <!-- Center: Navigation -->
           <nav class="hidden lg:flex items-center gap-1">
-            <UNavigationMenu :items="navItems" />
+            <UNavigationMenu :items="navItems" class="text-white" />
           </nav>
 
           <!-- Right: Actions -->
@@ -85,7 +85,7 @@
       <!-- Mobile Menu -->
       <div v-if="mobileMenuOpen" class="lg:hidden border-t" style="border-color: rgba(255, 107, 53, 0.3);">
         <div class="px-4 py-4">
-          <UNavigationMenu :items="navItems" orientation="vertical" class="-mx-2.5" />
+          <UNavigationMenu :items="navItems" orientation="vertical" class="-mx-2.5 text-white" />
         </div>
       </div>
     </header>
@@ -254,4 +254,32 @@ onMounted(async () => {
   })
 })
 </script>
+
+<style scoped>
+/* Ensure navigation menu items are white on dark header */
+header :deep(nav a),
+header :deep(nav button),
+header :deep(nav span),
+header :deep([role="navigation"] a),
+header :deep([role="navigation"] button),
+header :deep([role="navigation"] span) {
+  color: white !important;
+}
+
+header :deep(nav a:hover),
+header :deep(nav button:hover),
+header :deep([role="navigation"] a:hover),
+header :deep([role="navigation"] button:hover) {
+  color: rgba(255, 255, 255, 0.8) !important;
+}
+
+/* Active state */
+header :deep(nav a[aria-current="page"]),
+header :deep(nav button[aria-current="page"]),
+header :deep([role="navigation"] a[aria-current="page"]),
+header :deep([role="navigation"] button[aria-current="page"]) {
+  color: white !important;
+  opacity: 1;
+}
+</style>
 

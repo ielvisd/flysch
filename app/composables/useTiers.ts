@@ -7,7 +7,8 @@ export const useTiers = () => {
   /**
    * Calculate trust tier based on school signals
    */
-  const calculateTier = (school: Partial<School>): TrustTier => {
+  const calculateTier = (school: Partial<School> | null | undefined): TrustTier => {
+    if (!school) return 'Unverified'
     const programCount = school.programs?.length || 0
     const utilization = school.fsp_signals?.fleetUtilization || 0
     const passRate = school.fsp_signals?.passRateFirstAttempt || 0
@@ -128,7 +129,8 @@ export const useTiers = () => {
   /**
    * Check if school meets tier requirements
    */
-  const meetsTierRequirements = (school: Partial<School>, targetTier: TrustTier): boolean => {
+  const meetsTierRequirements = (school: Partial<School> | null | undefined, targetTier: TrustTier): boolean => {
+    if (!school) return false
     const currentTier = calculateTier(school)
     const tierRanking = {
       'Premier': 4,
@@ -143,7 +145,8 @@ export const useTiers = () => {
   /**
    * Get next tier recommendations
    */
-  const getNextTierRecommendations = (school: Partial<School>): string[] => {
+  const getNextTierRecommendations = (school: Partial<School> | null | undefined): string[] => {
+    if (!school) return []
     const currentTier = calculateTier(school)
     const recommendations: string[] = []
     

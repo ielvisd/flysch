@@ -235,9 +235,6 @@
                 <span v-if="!loading">🎯</span>
                 {{ loading ? 'Loading...' : `${schools?.length || 0} Schools Found` }}
               </h3>
-              <UBadge v-if="!loading && schools?.length" color="primary" variant="soft" size="sm">
-                {{ schools.length }} results
-              </UBadge>
             </div>
             <div class="flex items-center gap-2">
               <!-- View Toggle -->
@@ -301,14 +298,15 @@
           </div>
 
           <!-- Results Table (Table View) -->
-          <div v-else-if="schools && schools.length > 0 && viewMode === 'table'" class="overflow-x-auto">
+          <div v-else-if="schools && schools.length > 0 && viewMode === 'table'" class="overflow-x-auto table-wrapper">
             <UTable 
+              :key="`table-${tableSort.map(s => `${s.id}-${s.direction}`).join('-')}`"
               :data="sortedSchools"
               :columns="tableColumns"
               v-model:sort="tableSort"
               :page-size="pageSize"
               v-model:page="currentPage"
-              class="w-full"
+              class="w-full table-sortable"
             >
               <template #name-data="{ row }">
                 <div class="flex items-center gap-2">
@@ -418,6 +416,8 @@
 </template>
 
 <script setup lang="ts">
+import { h, resolveComponent } from 'vue'
+import type { Column } from '@tanstack/vue-table'
 import type { SchoolFilters, TrustTier } from '~~/types/database'
 import { useSchools } from '~~/app/composables/useSchools'
 import { useTiers } from '~~/app/composables/useTiers'
@@ -535,58 +535,115 @@ const sortMenuItems = computed(() => {
 // Table sort state (for built-in table sorting)
 const tableSort = ref<Array<{ id: string; direction: 'asc' | 'desc' }>>([{ id: 'name', direction: 'asc' }])
 
-// Table columns configuration
-const tableColumns = computed(() => [
-  {
-    id: 'name',
-    key: 'name',
-    label: 'School Name',
-    sortable: true,
-    accessorFn: (row: any) => row.name
-  },
-  {
-    id: 'location',
-    key: 'location',
-    label: 'Location',
-    accessorFn: (row: any) => `${row.city}, ${row.state}`
-  },
-  {
-    id: 'programs',
-    key: 'programs',
-    label: 'Programs',
-    accessorFn: (row: any) => row.programs?.map((p: any) => p.type).join(', ') || ''
-  },
-  {
-    id: 'cost',
-    key: 'cost',
-    label: 'Cost Range',
-    sortable: true,
-    accessorFn: (row: any) => {
-      if (!row.programs || row.programs.length === 0) return Infinity
-      return Math.min(...row.programs.map((p: any) => p.minCost))
-    }
-  },
-  {
-    id: 'tier',
-    key: 'tier',
-    label: 'Trust Tier',
-    sortable: true,
-    accessorFn: (row: any) => {
-      const tierOrder: Record<string, number> = {
-        'Premier': 4,
-        'Verified': 3,
-        'Community': 2,
-        'Unverified': 1
-      }
-      return tierOrder[row.trust_tier] || 0
-    }
-  },
-  {
-    id: 'actions',
-    key: 'actions',
-    label: 'Actions'
+// Helper function to create sortable header with visual indicators
+const createSortableHeader = (column: Column<any, unknown>, label: string) => {
+  const UButton = resolveComponent('UButton')
+  const isSorted = column.getIsSorted()
+  
+  const getSortIcon = () => {
+    if (isSorted === 'asc') return 'i-heroicons-arrow-up'
+    if (isSorted === 'desc') return 'i-heroicons-arrow-down'
+    return 'i-heroicons-arrows-up-down'
   }
-])
+  
+  const getSortColor = () => {
+    if (isSorted) return 'primary'
+    return 'neutral'
+  }
+  
+  return h(UButton, {
+    color: getSortColor(),
+    variant: 'ghost',
+    label,
+    icon: getSortIcon(),
+    class: '-mx-2.5 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors',
+    style: isSorted ? { color: '#004E89' } : {},
+    onClick: () => {
+      const currentSort = column.getIsSorted()
+      if (currentSort === 'asc') {
+        column.toggleSorting(true) // Switch to desc
+      } else if (currentSort === 'desc') {
+        column.clearSorting() // Clear sort
+      } else {
+        column.toggleSorting(false) // Switch to asc
+      }
+    },
+    'aria-label': `Sort by ${label} ${isSorted === 'asc' ? 'descending' : isSorted === 'desc' ? 'clearing sort' : 'ascending'}`
+  })
+}
+
+// Table columns configuration
+const tableColumns = computed(() => {
+  const columns: any[] = [
+    {
+      id: 'name',
+      key: 'name',
+      header: ({ column }: { column: Column<any, unknown> }) => createSortableHeader(column, 'School Name'),
+      sortable: true,
+      accessorFn: (row: any) => row.name
+    },
+    {
+      id: 'location',
+      key: 'location',
+      header: ({ column }: { column: Column<any, unknown> }) => createSortableHeader(column, 'Location'),
+      sortable: true,
+      accessorFn: (row: any) => {
+        // If location filter is active, sort by distance
+        if (filters.value.location) {
+          const point = parseLocation(row.location)
+          if (!point) return Infinity
+          return calculateDistance(
+            filters.value.location!.lat,
+            filters.value.location!.lng,
+            point.lat,
+            point.lng
+          )
+        }
+        // Otherwise, sort alphabetically by city, then state
+        return `${row.city || ''}, ${row.state || ''}`
+      }
+    },
+    {
+      id: 'programs',
+      key: 'programs',
+      header: ({ column }: { column: Column<any, unknown> }) => createSortableHeader(column, 'Programs'),
+      sortable: true,
+      accessorFn: (row: any) => row.programs?.length || 0
+    },
+    {
+      id: 'cost',
+      key: 'cost',
+      header: ({ column }: { column: Column<any, unknown> }) => createSortableHeader(column, 'Cost Range'),
+      sortable: true,
+      accessorFn: (row: any) => {
+        if (!row.programs || row.programs.length === 0) return Infinity
+        return Math.min(...row.programs.map((p: any) => p.minCost))
+      }
+    },
+    {
+      id: 'tier',
+      key: 'tier',
+      header: ({ column }: { column: Column<any, unknown> }) => createSortableHeader(column, 'Trust Tier'),
+      sortable: true,
+      accessorFn: (row: any) => {
+        const tierOrder: Record<string, number> = {
+          'Premier': 4,
+          'Verified': 3,
+          'Community': 2,
+          'Unverified': 1
+        }
+        return tierOrder[row.trust_tier] || 0
+      }
+    },
+    {
+      id: 'actions',
+      key: 'actions',
+      header: 'Actions'
+    }
+  ]
+  
+  return columns
+})
 
 // Computed - Sort schools (for card view and dropdown sort)
 const sortedSchools = computed(() => {
@@ -810,6 +867,50 @@ onMounted(async () => {
 .map-container {
   height: 400px;
   min-height: 300px;
+}
+
+/* Table row animations for smooth sorting transitions */
+.table-wrapper :deep(.u-table tbody tr) {
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.table-wrapper :deep(.u-table tbody tr:hover) {
+  background-color: rgba(0, 78, 137, 0.05);
+  transition: background-color 0.2s ease;
+}
+
+/* Smooth fade-in for table rows when sort changes */
+.table-sortable :deep(.u-table tbody tr) {
+  animation: fadeInRow 0.3s ease-in-out;
+}
+
+@keyframes fadeInRow {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Enhanced header button hover effects */
+.table-sortable :deep(.u-table th button) {
+  transition: all 0.2s ease;
+}
+
+.table-sortable :deep(.u-table th button:hover) {
+  transform: scale(1.05);
+}
+
+/* Sort indicator animation */
+.table-sortable :deep(.u-table th button[class*="icon"]) {
+  transition: transform 0.2s ease;
+}
+
+.table-sortable :deep(.u-table th button:hover [class*="icon"]) {
+  transform: scale(1.1);
 }
 
 @media (max-width: 768px) {

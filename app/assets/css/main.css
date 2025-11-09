@@ -163,6 +163,31 @@ a[role="button"] {
   color: #e2e8f0 !important;
 }
 
+/* Light mode placeholder text - ensure dark text for readability */
+input::placeholder,
+textarea::placeholder,
+input[type="text"]::placeholder,
+input[type="search"]::placeholder,
+input[type="email"]::placeholder,
+input[type="password"]::placeholder {
+  color: #6b7280 !important;
+  opacity: 0.8;
+}
+
+/* Nuxt UI input placeholder styling for light mode */
+:not(.dark) input::placeholder,
+:not(.dark) textarea::placeholder {
+  color: #6b7280 !important;
+}
+
+/* Deep selectors for Nuxt UI components - ensure placeholder is readable */
+:not(.dark) [class*="input"] input::placeholder,
+:not(.dark) [class*="Input"] input::placeholder,
+:not(.dark) input[class*="input"]::placeholder {
+  color: #6b7280 !important;
+  opacity: 0.8;
+}
+
 /* Dark mode placeholder text */
 .dark input::placeholder,
 .dark textarea::placeholder {
