@@ -456,8 +456,8 @@
                   class="min-h-[44px] touch-manipulation"
                   style="background-color: #FF6B35; color: white;"
                 >
-                  <span class="hidden sm:inline">Sort</span>
-                  <span class="sm:hidden">Sort</span>
+                  <span class="hidden sm:inline">{{ currentSortLabel || 'Sort' }}</span>
+                  <span class="sm:hidden">{{ currentSortLabelMobile || 'Sort' }}</span>
                 </UButton>
               </UDropdownMenu>
             </div>
@@ -645,6 +645,32 @@ const viewMode = ref<'cards' | 'table'>('cards')
 const cardsContainer = ref<HTMLElement | null>(null)
 const cardRefs = ref<Array<{ $el?: HTMLElement } | null>>([])
 
+// Computed - Current sort label for button display (defined early for template access)
+const currentSortLabel = computed(() => {
+  const sortLabels: Record<string, { asc: string; desc: string }> = {
+    name: { asc: 'Name (A-Z)', desc: 'Name (Z-A)' },
+    cost: { asc: 'Cost (Low-High)', desc: 'Cost (High-Low)' },
+    distance: { asc: 'Distance (Nearest)', desc: 'Distance (Farthest)' },
+    tier: { asc: 'Trust Tier', desc: 'Trust Tier' }
+  }
+  
+  const label = sortLabels[sortBy.value]?.[sortOrder.value] || 'Sort'
+  return label
+})
+
+const currentSortLabelMobile = computed(() => {
+  // Shorter labels for mobile
+  const sortLabels: Record<string, { asc: string; desc: string }> = {
+    name: { asc: 'Name ↑', desc: 'Name ↓' },
+    cost: { asc: 'Cost ↑', desc: 'Cost ↓' },
+    distance: { asc: 'Near ↑', desc: 'Far ↓' },
+    tier: { asc: 'Tier', desc: 'Tier' }
+  }
+  
+  const label = sortLabels[sortBy.value]?.[sortOrder.value] || 'Sort'
+  return label
+})
+
 // Options
 const programOptions = ['PPL', 'IR', 'CPL', 'CFI', 'CFII', 'MEI', 'ATP']
 const trustTierOptions = ['Premier', 'Verified', 'Community', 'Unverified']
@@ -662,14 +688,14 @@ const sortMenuItems = computed(() => {
     [{
       label: 'Name (A-Z)',
       icon: sortBy.value === 'name' && sortOrder.value === 'asc' ? 'i-heroicons-check' : undefined,
-      click: () => {
+      onSelect: () => {
         sortBy.value = 'name'
         sortOrder.value = 'asc'
       }
     }, {
       label: 'Name (Z-A)',
       icon: sortBy.value === 'name' && sortOrder.value === 'desc' ? 'i-heroicons-check' : undefined,
-      click: () => {
+      onSelect: () => {
         sortBy.value = 'name'
         sortOrder.value = 'desc'
       }
@@ -677,14 +703,14 @@ const sortMenuItems = computed(() => {
     [{
       label: 'Cost (Low to High)',
       icon: sortBy.value === 'cost' && sortOrder.value === 'asc' ? 'i-heroicons-check' : undefined,
-      click: () => {
+      onSelect: () => {
         sortBy.value = 'cost'
         sortOrder.value = 'asc'
       }
     }, {
       label: 'Cost (High to Low)',
       icon: sortBy.value === 'cost' && sortOrder.value === 'desc' ? 'i-heroicons-check' : undefined,
-      click: () => {
+      onSelect: () => {
         sortBy.value = 'cost'
         sortOrder.value = 'desc'
       }
@@ -696,14 +722,14 @@ const sortMenuItems = computed(() => {
     items.push([{
       label: 'Distance (Nearest)',
       icon: sortBy.value === 'distance' && sortOrder.value === 'asc' ? 'i-heroicons-check' : undefined,
-      click: () => {
+      onSelect: () => {
         sortBy.value = 'distance'
         sortOrder.value = 'asc'
       }
     }, {
       label: 'Distance (Farthest)',
       icon: sortBy.value === 'distance' && sortOrder.value === 'desc' ? 'i-heroicons-check' : undefined,
-      click: () => {
+      onSelect: () => {
         sortBy.value = 'distance'
         sortOrder.value = 'desc'
       }
@@ -713,7 +739,7 @@ const sortMenuItems = computed(() => {
   items.push([{
     label: 'Trust Tier',
     icon: sortBy.value === 'tier' ? 'i-heroicons-check' : undefined,
-    click: () => {
+    onSelect: () => {
       sortBy.value = 'tier'
       sortOrder.value = 'asc'
     }
@@ -858,8 +884,18 @@ const sortedSchools = computed(() => {
         break
 
       case 'cost': {
-        const aMinCost = Math.min(...(a.programs?.map(p => p.minCost) || [Infinity]))
-        const bMinCost = Math.min(...(b.programs?.map(p => p.minCost) || [Infinity]))
+        const aPrograms = a.programs || []
+        const bPrograms = b.programs || []
+        
+        if (aPrograms.length === 0 && bPrograms.length === 0) {
+          comparison = 0
+          break
+        }
+        if (aPrograms.length === 0) return 1 // Schools without programs go to end
+        if (bPrograms.length === 0) return -1
+        
+        const aMinCost = Math.min(...aPrograms.map((p: any) => p.minCost || Infinity))
+        const bMinCost = Math.min(...bPrograms.map((p: any) => p.minCost || Infinity))
         comparison = aMinCost - bMinCost
         break
       }
@@ -872,6 +908,11 @@ const sortedSchools = computed(() => {
         const aPoint = parseLocation(a.location)
         const bPoint = parseLocation(b.location)
         
+        // Schools without location go to end
+        if (!aPoint && !bPoint) {
+          comparison = 0
+          break
+        }
         if (!aPoint) return 1
         if (!bPoint) return -1
         
@@ -898,7 +939,9 @@ const sortedSchools = computed(() => {
           'Community': 2,
           'Unverified': 1
         }
-        comparison = (tierOrder[b.trust_tier] || 0) - (tierOrder[a.trust_tier] || 0)
+        const aTier = tierOrder[a.trust_tier] || 0
+        const bTier = tierOrder[b.trust_tier] || 0
+        comparison = aTier - bTier // Lower tier number = higher tier, so ascending means Premier first
         break
       }
 
@@ -906,6 +949,7 @@ const sortedSchools = computed(() => {
         comparison = 0
     }
 
+    // Apply sort order (ascending or descending)
     return sortOrder.value === 'asc' ? comparison : -comparison
   })
 
