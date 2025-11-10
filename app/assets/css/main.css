@@ -163,14 +163,16 @@ a[role="button"] {
   color: #e2e8f0 !important;
 }
 
-/* Light mode placeholder text - ensure dark text for readability */
-/* Using darker color (#4b5563) for better contrast on light backgrounds */
+/* SIMPLE FIX: Placeholder text - make it dark and readable */
+/* Target ALL inputs - no exceptions */
+::placeholder,
 input::placeholder,
 textarea::placeholder,
 input[type="text"]::placeholder,
 input[type="search"]::placeholder,
 input[type="email"]::placeholder,
-input[type="password"]::placeholder {
+input[type="password"]::placeholder,
+*::placeholder {
   color: #4b5563 !important;
   opacity: 1 !important;
 }
@@ -217,19 +219,21 @@ input[type="password"]::placeholder {
   opacity: 0.8;
 }
 
-/* Fix navigation menu text visibility - ensure dark text in light mode menus */
-:not(.dark) [data-reka-collection-item] a,
-:not(.dark) [data-reka-collection-item] span,
-:not(.dark) [data-reka-collection-item] {
+/* SIMPLE FIX: Navigation menu text visibility */
+/* Default: dark text for all navigation items (works on white backgrounds) */
+[data-reka-collection-item] a,
+[data-reka-collection-item] span,
+[data-reka-collection-item] {
   color: #004E89 !important;
 }
 
-/* But keep white text when in dark header */
+/* Override: white text when inside header (dark blue background) */
 header [data-reka-collection-item] a,
 header [data-reka-collection-item] span,
 header [data-reka-collection-item],
-header nav a,
-header nav [data-reka-collection-item] a {
+header nav [data-reka-collection-item] a,
+header nav [data-reka-collection-item] span,
+header nav [data-reka-collection-item] {
   color: white !important;
 }
 

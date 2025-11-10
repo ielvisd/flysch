@@ -1,20 +1,20 @@
 <template>
-  <UCard 
-    variant="outline"
-    class="school-card cursor-pointer transition-all duration-200 bg-white"
-    :style="{
-      border: '2px solid rgba(0, 78, 137, 0.4)',
-      boxShadow: '0 2px 4px rgba(0, 78, 137, 0.1)',
-      ...(swipe.isSwiping.value ? swipe.getTransformStyle.value : {})
-    }"
-    @click="handleClick"
-    @touchstart="swipe.handleTouchStart"
-    @touchmove="swipe.handleTouchMove"
-    @touchend="swipe.handleTouchEnd"
-    @touchcancel="swipe.handleTouchCancel"
-    v-intersect="onIntersect"
-    :class="{ 'swiping': swipe.isSwiping.value }"
-  >
+  <div ref="cardRef">
+    <UCard 
+      variant="outline"
+      class="school-card cursor-pointer transition-all duration-200 bg-white"
+      :style="{
+        border: '2px solid rgba(0, 78, 137, 0.4)',
+        boxShadow: '0 2px 4px rgba(0, 78, 137, 0.1)',
+        ...(swipe.isSwiping.value ? swipe.getTransformStyle.value : {})
+      }"
+      @click="handleClick"
+      @touchstart="swipe.handleTouchStart"
+      @touchmove="swipe.handleTouchMove"
+      @touchend="swipe.handleTouchEnd"
+      @touchcancel="swipe.handleTouchCancel"
+      :class="{ 'swiping': swipe.isSwiping.value }"
+    >
     <template #header>
       <div class="flex justify-between items-start gap-4">
         <div class="flex-1 min-w-0">
@@ -140,7 +140,8 @@
         </UButton>
       </div>
     </template>
-  </UCard>
+    </UCard>
+  </div>
 </template>
 
 <script setup lang="ts">
@@ -243,10 +244,21 @@ const handleClick = (e: MouseEvent) => {
 }
 
 // Lazy loading intersection observer
+const cardRef = ref<HTMLElement | null>(null)
 const isVisible = ref(false)
-const onIntersect = (isIntersecting: boolean) => {
-  isVisible.value = isIntersecting
-}
+
+useIntersectionObserver(
+  cardRef,
+  (entries) => {
+    const entry = entries[0]
+    if (entry) {
+      isVisible.value = entry.isIntersecting
+    }
+  },
+  {
+    threshold: 0.1
+  }
+)
 </script>
 
 <style scoped>

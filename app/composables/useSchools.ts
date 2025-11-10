@@ -25,6 +25,157 @@ export const useSchools = () => {
   const CACHE_TTL = 5 * 60 * 1000
 
   /**
+   * Parse EWKB (Extended Well-Known Binary) hex string to extract coordinates
+   * EWKB format: [endian(1)] [type(4)] [SRID(4)] [X(8)] [Y(8)]
+   * For POINT with SRID 4326: 01 01000000 E6100000 [X bytes] [Y bytes]
+   */
+  const parseEWKB = (hexString: string): { lat: number; lng: number } | null => {
+    try {
+      // Minimum length: 1 (endian) + 4 (type) + 4 (SRID) + 8 (X) + 8 (Y) = 25 bytes = 50 hex chars
+      if (hexString.length < 50) {
+        console.warn('EWKB string too short:', hexString.length)
+        return null
+      }
+      
+      // Check endianness (should be 01 for little endian)
+      if (hexString.substring(0, 2) !== '01') {
+        console.warn('EWKB not little endian:', hexString.substring(0, 2))
+        return null
+      }
+      
+      // Extract coordinate hex strings
+      // Skip: 1 byte (endian) + 4 bytes (type) + 4 bytes (SRID) = 9 bytes = 18 hex chars
+      // X coordinate: bytes 9-16 (18 hex chars starting at position 18)
+      // Y coordinate: bytes 17-24 (18 hex chars starting at position 34)
+      const xHex = hexString.substring(18, 34)
+      const yHex = hexString.substring(34, 50)
+      
+      if (!xHex || !yHex || xHex.length !== 16 || yHex.length !== 16) {
+        console.warn('Invalid coordinate hex strings:', { xHex, yHex })
+        return null
+      }
+      
+      // Convert hex to double (little endian)
+      const hexToDouble = (hex: string): number => {
+        // Create bytes array in little-endian order
+        const bytes = new Uint8Array(8)
+        for (let i = 0; i < 8; i++) {
+          bytes[i] = parseInt(hex.substring(i * 2, i * 2 + 2), 16)
+        }
+        const view = new DataView(bytes.buffer)
+        return view.getFloat64(0, true) // true = little endian
+      }
+      
+      const lng = hexToDouble(xHex) // X = longitude
+      const lat = hexToDouble(yHex) // Y = latitude
+      
+      // Validate coordinates are within valid ranges
+      if (isNaN(lat) || isNaN(lng) || !isFinite(lat) || !isFinite(lng)) {
+        console.warn('Invalid parsed coordinates:', { lat, lng, hexString: hexString.substring(0, 50) })
+        return null
+      }
+      
+      // Validate lat/lng ranges
+      if (lat < -90 || lat > 90 || lng < -180 || lng > 180) {
+        console.warn('Coordinates out of valid range:', { lat, lng })
+        return null
+      }
+      
+      return { lat, lng }
+    } catch (error) {
+      console.warn('Error parsing EWKB:', error, hexString.substring(0, 50))
+      return null
+    }
+  }
+
+  /**
+   * Transform location from various Supabase/PostGIS formats to normalized { lat, lng } format
+   */
+  const transformLocation = (location: any): { lat: number; lng: number } | null => {
+    if (!location) {
+      console.debug('Location is null or undefined')
+      return null
+    }
+
+    // Handle already normalized object format
+    if (typeof location === 'object' && 'lat' in location && 'lng' in location) {
+      const lat = Number(location.lat)
+      const lng = Number(location.lng)
+      if (!isNaN(lat) && !isNaN(lng) && isFinite(lat) && isFinite(lng)) {
+        return { lat, lng }
+      }
+      console.warn('Invalid lat/lng values in location object:', location)
+      return null
+    }
+
+    // Handle GeoJSON format: { type: "Point", coordinates: [lng, lat] }
+    if (typeof location === 'object' && 'type' in location && location.type === 'Point' && 
+        Array.isArray(location.coordinates) && location.coordinates.length >= 2) {
+      const lng = Number(location.coordinates[0])
+      const lat = Number(location.coordinates[1])
+      if (!isNaN(lat) && !isNaN(lng) && isFinite(lat) && isFinite(lng)) {
+        return { lat, lng }
+      }
+      console.warn('Invalid coordinates in GeoJSON:', location)
+      return null
+    }
+
+    // Handle PostGIS WKT format: "POINT(lng lat)" or "SRID=4326;POINT(lng lat)"
+    if (typeof location === 'string') {
+      // Check if it's EWKB hex format (starts with 01 and is long hex string)
+      if (location.match(/^01[0-9A-Fa-f]{40,}$/)) {
+        const coords = parseEWKB(location)
+        if (coords) {
+          return coords
+        }
+        // If EWKB parsing failed, continue to try other formats
+      }
+      
+      // Remove SRID prefix if present
+      let wktString = location.replace(/^SRID=\d+;/, '')
+      
+      // Match POINT(lng lat) format
+      const pointMatch = wktString.match(/POINT\s*\(\s*([-\d.]+)\s+([-\d.]+)\s*\)/i)
+      if (pointMatch) {
+        const lng = Number(pointMatch[1])
+        const lat = Number(pointMatch[2])
+        if (!isNaN(lat) && !isNaN(lng) && isFinite(lat) && isFinite(lng)) {
+          return { lat, lng }
+        }
+        console.warn('Invalid coordinates in WKT string:', location)
+        return null
+      }
+      
+      // Try to parse as comma-separated or space-separated coordinates
+      const coordsMatch = wktString.match(/([-\d.]+)[,\s]+([-\d.]+)/)
+      if (coordsMatch) {
+        const lng = Number(coordsMatch[1])
+        const lat = Number(coordsMatch[2])
+        if (!isNaN(lat) && !isNaN(lng) && isFinite(lat) && isFinite(lng)) {
+          return { lat, lng }
+        }
+      }
+      
+      console.warn('Unable to parse location string:', location.substring(0, 50))
+      return null
+    }
+
+    // Handle array format: [lng, lat]
+    if (Array.isArray(location) && location.length >= 2) {
+      const lng = Number(location[0])
+      const lat = Number(location[1])
+      if (!isNaN(lat) && !isNaN(lng) && isFinite(lat) && isFinite(lng)) {
+        return { lat, lng }
+      }
+      console.warn('Invalid coordinates in array:', location)
+      return null
+    }
+
+    console.warn('Unknown location format:', typeof location, location)
+    return null
+  }
+
+  /**
    * Fetch schools with filters
    */
   const fetchSchools = async (filters?: SchoolFilters) => {
@@ -55,9 +206,33 @@ export const useSchools = () => {
 
     try {
       const supabase = getSupabase()
+      
+      // Use RPC to extract coordinates from PostGIS geography, or fallback to regular select
+      // First try to get schools with extracted coordinates using raw SQL via RPC
       let query = supabase
         .from('schools')
-        .select('*')
+        .select(`
+          id,
+          name,
+          address,
+          city,
+          state,
+          zip_code,
+          country,
+          programs,
+          fleet,
+          instructors_count,
+          trust_tier,
+          fsp_signals,
+          verified_at,
+          claimed_by,
+          website,
+          phone,
+          email,
+          created_at,
+          updated_at,
+          location
+        `)
         .order('name', { ascending: true })
 
       // Apply text search
@@ -83,7 +258,28 @@ export const useSchools = () => {
         throw fetchError
       }
 
-      let results = data || []
+      // Transform location data after fetching to normalize PostGIS geography format
+      let results = (data || []).map((school: any) => {
+        const originalLocation = school.location
+        const location = transformLocation(school.location)
+        
+        // Debug logging for location transformation
+        if (!location && originalLocation) {
+          console.warn(`Failed to transform location for school ${school.name || school.id}:`, {
+            originalLocation,
+            type: typeof originalLocation,
+            isArray: Array.isArray(originalLocation),
+            keys: typeof originalLocation === 'object' ? Object.keys(originalLocation) : 'N/A'
+          })
+        }
+        
+        return {
+          ...school,
+          location
+        }
+      })
+      
+      console.debug(`Fetched ${results.length} schools, ${results.filter(s => s.location).length} with valid locations`)
 
       // Apply geo-filter if provided
       if (filters?.location) {
@@ -119,11 +315,10 @@ export const useSchools = () => {
         )
       }
 
-      // Update cache only if no filters or minimal filters
-      if (!hasFilters) {
-        schoolsCache.value = results
-        cacheTimestamp.value = Date.now()
-      }
+      // Update cache with results (even when filtered, so the reactive schools property updates)
+      // This ensures the map component receives the filtered schools
+      schoolsCache.value = results
+      cacheTimestamp.value = Date.now()
       
       return results
 
@@ -166,6 +361,11 @@ export const useSchools = () => {
 
       if (fetchError) {
         throw fetchError
+      }
+
+      // Transform location data to normalized format
+      if (data) {
+        data.location = transformLocation(data.location)
       }
 
       return data
@@ -240,32 +440,10 @@ export const useSchools = () => {
   }
 
   /**
-   * Parse location from various formats
+   * Parse location from various formats (legacy function, now uses transformLocation)
    */
   const parseLocation = (location: any): { lat: number; lng: number } | null => {
-    if (!location) return null
-
-    // Handle PostGIS geography format
-    if (typeof location === 'string' && location.startsWith('POINT(')) {
-      const coords = location.match(/POINT\(([^)]+)\)/)
-      if (coords && coords[1]) {
-        const parts = coords[1].split(' ').map(Number)
-        if (parts.length >= 2) {
-          const lng = parts[0]
-          const lat = parts[1]
-          if (lng !== undefined && lat !== undefined && !isNaN(lng) && !isNaN(lat)) {
-            return { lat, lng }
-          }
-        }
-      }
-    }
-
-    // Handle object format
-    if (typeof location === 'object' && 'lat' in location && 'lng' in location) {
-      return { lat: location.lat, lng: location.lng }
-    }
-
-    return null
+    return transformLocation(location)
   }
 
   /**

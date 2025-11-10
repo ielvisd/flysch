@@ -185,12 +185,23 @@ test.describe('Matching Wizard - Mobile', () => {
     await page.waitForTimeout(1000)
     
     // Wizard should be visible
-    expect(await page.locator('text=/find your perfect match/i').isVisible()).toBe(true)
+    await expect(page.getByRole('heading', { name: /find your perfect match/i })).toBeVisible()
     
-    // Progress steps should be visible
-    const steps = page.locator('text=/goals/i, text=/budget/i, text=/location/i, text=/preferences/i')
-    const stepCount = await steps.count()
-    expect(stepCount).toBeGreaterThan(0)
+    // Progress steps should be visible - check for step indicators or headings
+    const step1 = page.getByText(/goals/i).first()
+    const step2 = page.getByText(/budget/i).first()
+    const step3 = page.getByText(/location/i).first()
+    const step4 = page.getByText(/preferences/i).first()
+    
+    // At least one step should be visible
+    const visibleSteps = await Promise.all([
+      step1.isVisible().catch(() => false),
+      step2.isVisible().catch(() => false),
+      step3.isVisible().catch(() => false),
+      step4.isVisible().catch(() => false)
+    ])
+    
+    expect(visibleSteps.some(v => v)).toBe(true)
   })
 
   test('should handle touch interactions', async ({ page }) => {

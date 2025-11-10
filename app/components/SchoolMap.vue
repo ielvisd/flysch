@@ -89,9 +89,13 @@ const effectiveCenter = computed(() => {
 
 // Initialize map
 onMounted(() => {
-  if (!mapContainer.value || !process.client) return
+  if (!mapContainer.value || !process.client) {
+    console.debug('Map container not available or not on client')
+    return
+  }
 
   const center = effectiveCenter.value
+  console.debug('Initializing map with center:', center, 'schools count:', props.schools?.length || 0)
 
   // Initialize map
   map = L.map(mapContainer.value, {
@@ -141,31 +145,52 @@ onMounted(() => {
     }
   }
 
-  // Add school markers
-  updateMarkers()
+  // Wait a tick to ensure map is fully initialized
+  nextTick(() => {
+    // Add school markers
+    updateMarkers()
 
-  // Fit bounds if schools are provided
-  if (props.schools.length > 0 || props.singleSchool) {
-    fitBounds()
-  }
+    // Fit bounds if schools are provided
+    if (props.schools && props.schools.length > 0 || props.singleSchool) {
+      fitBounds()
+    }
+    
+    console.debug('Map initialized with', props.schools?.length || 0, 'schools')
+  })
 })
 
 // Update markers when schools change
-watch(() => props.schools, () => {
-  if (map) {
-    updateMarkers()
+watch(() => props.schools, (newSchools, oldSchools) => {
+  if (!map) {
+    console.debug('Map not initialized, skipping marker update on schools change')
+    return
+  }
+  
+  console.debug('Schools prop changed:', {
+    oldCount: oldSchools?.length || 0,
+    newCount: newSchools?.length || 0
+  })
+  
+  updateMarkers()
+  fitBounds()
+}, { deep: true, immediate: false })
+
+watch(() => props.singleSchool, (newSchool, oldSchool) => {
+  if (!map) {
+    console.debug('Map not initialized, skipping marker update on singleSchool change')
+    return
+  }
+  
+  console.debug('SingleSchool prop changed:', {
+    oldId: oldSchool?.id,
+    newId: newSchool?.id
+  })
+  
+  updateMarkers()
+  if (props.singleSchool) {
     fitBounds()
   }
 }, { deep: true })
-
-watch(() => props.singleSchool, () => {
-  if (map) {
-    updateMarkers()
-    if (props.singleSchool) {
-      fitBounds()
-    }
-  }
-})
 
 watch(() => [effectiveCenter.value, props.radius], () => {
   if (map && props.showRadius) {
@@ -186,7 +211,10 @@ watch(() => [effectiveCenter.value, props.radius], () => {
 
 // Update markers
 const updateMarkers = () => {
-  if (!map) return
+  if (!map) {
+    console.debug('Map not initialized, skipping marker update')
+    return
+  }
 
   // Clear existing markers
   markers.forEach(marker => map!.removeLayer(marker))
@@ -194,19 +222,58 @@ const updateMarkers = () => {
 
   const schoolsToShow = props.singleSchool ? [props.singleSchool] : props.schools
 
+  if (!schoolsToShow || schoolsToShow.length === 0) {
+    console.debug('No schools to display on map')
+    return
+  }
+
+  console.debug(`Updating markers for ${schoolsToShow.length} school(s)`)
+  console.debug('Schools data:', schoolsToShow.map(s => ({
+    id: s.id,
+    name: s.name,
+    location: s.location,
+    locationType: typeof s.location
+  })))
+
+  let markersCreated = 0
+  let markersSkipped = 0
+
   schoolsToShow.forEach((school) => {
-    if (!school.location) return
+    if (!school.location) {
+      console.debug(`School ${school.name || school.id} has no location data`)
+      markersSkipped++
+      return
+    }
 
     const location = parseLocation(school.location)
-    if (!location) return
+    if (!location) {
+      console.warn(`Failed to parse location for school ${school.name || school.id}:`, school.location)
+      markersSkipped++
+      return
+    }
 
-    const icon = createSchoolIcon(school.trust_tier || 'Unverified')
-    const marker = L.marker([location.lat, location.lng], { icon })
-      .addTo(map!)
-      .bindPopup(createPopupContent(school))
+    // Validate coordinates are within valid ranges
+    if (location.lat < -90 || location.lat > 90 || location.lng < -180 || location.lng > 180) {
+      console.warn(`Invalid coordinates for school ${school.name || school.id}:`, location)
+      markersSkipped++
+      return
+    }
 
-    markers.push(marker)
+    try {
+      const icon = createSchoolIcon(school.trust_tier || 'Unverified')
+      const marker = L.marker([location.lat, location.lng], { icon })
+        .addTo(map!)
+        .bindPopup(createPopupContent(school))
+
+      markers.push(marker)
+      markersCreated++
+    } catch (error) {
+      console.error(`Error creating marker for school ${school.name || school.id}:`, error)
+      markersSkipped++
+    }
   })
+
+  console.debug(`Markers created: ${markersCreated}, skipped: ${markersSkipped}`)
 }
 
 // Create popup content
@@ -247,30 +314,151 @@ const createPopupContent = (school: School): string => {
   `
 }
 
-// Parse location from various formats
-const parseLocation = (location: any): { lat: number; lng: number } | null => {
-  if (!location) return null
+/**
+ * Parse EWKB (Extended Well-Known Binary) hex string to extract coordinates
+ * EWKB format: [endian(1)] [type(4)] [SRID(4)] [X(8)] [Y(8)]
+ * For POINT with SRID 4326: 01 01000000 E6100000 [X bytes] [Y bytes]
+ */
+const parseEWKB = (hexString: string): { lat: number; lng: number } | null => {
+  try {
+    // Minimum length: 1 (endian) + 4 (type) + 4 (SRID) + 8 (X) + 8 (Y) = 25 bytes = 50 hex chars
+    if (hexString.length < 50) {
+      console.warn('EWKB string too short:', hexString.length)
+      return null
+    }
+    
+    // Check endianness (should be 01 for little endian)
+    if (hexString.substring(0, 2) !== '01') {
+      console.warn('EWKB not little endian:', hexString.substring(0, 2))
+      return null
+    }
+    
+    // Extract coordinate hex strings
+    // Skip: 1 byte (endian) + 4 bytes (type) + 4 bytes (SRID) = 9 bytes = 18 hex chars
+    // X coordinate: bytes 9-16 (18 hex chars starting at position 18)
+    // Y coordinate: bytes 17-24 (18 hex chars starting at position 34)
+    const xHex = hexString.substring(18, 34)
+    const yHex = hexString.substring(34, 50)
+    
+    if (!xHex || !yHex || xHex.length !== 16 || yHex.length !== 16) {
+      console.warn('Invalid coordinate hex strings:', { xHex, yHex })
+      return null
+    }
+    
+    // Convert hex to double (little endian)
+    const hexToDouble = (hex: string): number => {
+      // Create bytes array in little-endian order
+      const bytes = new Uint8Array(8)
+      for (let i = 0; i < 8; i++) {
+        bytes[i] = parseInt(hex.substring(i * 2, i * 2 + 2), 16)
+      }
+      const view = new DataView(bytes.buffer)
+      return view.getFloat64(0, true) // true = little endian
+    }
+    
+    const lng = hexToDouble(xHex) // X = longitude
+    const lat = hexToDouble(yHex) // Y = latitude
+    
+    // Validate coordinates are within valid ranges
+    if (isNaN(lat) || isNaN(lng) || !isFinite(lat) || !isFinite(lng)) {
+      console.warn('Invalid parsed coordinates:', { lat, lng, hexString: hexString.substring(0, 50) })
+      return null
+    }
+    
+    // Validate lat/lng ranges
+    if (lat < -90 || lat > 90 || lng < -180 || lng > 180) {
+      console.warn('Coordinates out of valid range:', { lat, lng })
+      return null
+    }
+    
+    return { lat, lng }
+  } catch (error) {
+    console.warn('Error parsing EWKB:', error, hexString.substring(0, 50))
+    return null
+  }
+}
 
-  // Handle PostGIS geography format
-  if (typeof location === 'string' && location.startsWith('POINT(')) {
-    const coords = location.match(/POINT\(([^)]+)\)/)
-    if (coords && coords[1]) {
-      const parts = coords[1].split(' ').map(Number)
-      if (parts.length >= 2) {
-        const lng = parts[0]
-        const lat = parts[1]
-        if (lng !== undefined && lat !== undefined && !isNaN(lng) && !isNaN(lat)) {
-          return { lat, lng }
-        }
+// Parse location from various formats (enhanced to handle all Supabase/PostGIS formats)
+const parseLocation = (location: any): { lat: number; lng: number } | null => {
+  if (!location) {
+    console.debug('Location is null or undefined')
+    return null
+  }
+
+  // Handle already normalized object format
+  if (typeof location === 'object' && 'lat' in location && 'lng' in location) {
+    const lat = Number(location.lat)
+    const lng = Number(location.lng)
+    if (!isNaN(lat) && !isNaN(lng) && isFinite(lat) && isFinite(lng)) {
+      return { lat, lng }
+    }
+    console.warn('Invalid lat/lng values in location object:', location)
+    return null
+  }
+
+  // Handle GeoJSON format: { type: "Point", coordinates: [lng, lat] }
+  if (typeof location === 'object' && 'type' in location && location.type === 'Point' && 
+      Array.isArray(location.coordinates) && location.coordinates.length >= 2) {
+    const lng = Number(location.coordinates[0])
+    const lat = Number(location.coordinates[1])
+    if (!isNaN(lat) && !isNaN(lng) && isFinite(lat) && isFinite(lng)) {
+      return { lat, lng }
+    }
+    console.warn('Invalid coordinates in GeoJSON:', location)
+    return null
+  }
+
+  // Handle PostGIS WKT format: "POINT(lng lat)" or "SRID=4326;POINT(lng lat)"
+  if (typeof location === 'string') {
+    // Check if it's EWKB hex format (starts with 01 and is long hex string)
+    if (location.match(/^01[0-9A-Fa-f]{40,}$/)) {
+      const coords = parseEWKB(location)
+      if (coords) {
+        return coords
       }
     }
+    
+    // Remove SRID prefix if present
+    let wktString = location.replace(/^SRID=\d+;/, '')
+    
+    // Match POINT(lng lat) format (case insensitive, with optional whitespace)
+    const pointMatch = wktString.match(/POINT\s*\(\s*([-\d.]+)\s+([-\d.]+)\s*\)/i)
+    if (pointMatch) {
+      const lng = Number(pointMatch[1])
+      const lat = Number(pointMatch[2])
+      if (!isNaN(lat) && !isNaN(lng) && isFinite(lat) && isFinite(lng)) {
+        return { lat, lng }
+      }
+      console.warn('Invalid coordinates in WKT string:', location)
+      return null
+    }
+    
+    // Try to parse as comma-separated or space-separated coordinates
+    const coordsMatch = wktString.match(/([-\d.]+)[,\s]+([-\d.]+)/)
+    if (coordsMatch) {
+      const lng = Number(coordsMatch[1])
+      const lat = Number(coordsMatch[2])
+      if (!isNaN(lat) && !isNaN(lng) && isFinite(lat) && isFinite(lng)) {
+        return { lat, lng }
+      }
+    }
+    
+    console.warn('Unable to parse location string:', location.substring(0, 50))
+    return null
   }
 
-  // Handle object format
-  if (typeof location === 'object' && 'lat' in location && 'lng' in location) {
-    return { lat: location.lat, lng: location.lng }
+  // Handle array format: [lng, lat]
+  if (Array.isArray(location) && location.length >= 2) {
+    const lng = Number(location[0])
+    const lat = Number(location[1])
+    if (!isNaN(lat) && !isNaN(lng) && isFinite(lat) && isFinite(lng)) {
+      return { lat, lng }
+    }
+    console.warn('Invalid coordinates in array:', location)
+    return null
   }
 
+  console.warn('Unknown location format:', typeof location, location)
   return null
 }
 
@@ -285,22 +473,45 @@ const fitBounds = () => {
     if (!school.location) return
     const location = parseLocation(school.location)
     if (location) {
-      bounds.push([location.lat, location.lng] as L.LatLngTuple)
+      // Validate coordinates before adding to bounds
+      if (isFinite(location.lat) && isFinite(location.lng) &&
+          location.lat >= -90 && location.lat <= 90 &&
+          location.lng >= -180 && location.lng <= 180) {
+        bounds.push([location.lat, location.lng] as L.LatLngTuple)
+      } else {
+        console.warn(`Invalid coordinates for school ${school.name || school.id}:`, location)
+      }
     }
   })
 
   // Include user location if showing radius
   if (props.showRadius && effectiveCenter.value) {
     const center = effectiveCenter.value
-    bounds.push([center.lat, center.lng] as L.LatLngTuple)
+    if (isFinite(center.lat) && isFinite(center.lng) &&
+        center.lat >= -90 && center.lat <= 90 &&
+        center.lng >= -180 && center.lng <= 180) {
+      bounds.push([center.lat, center.lng] as L.LatLngTuple)
+    }
   }
 
   if (bounds.length > 0) {
-    if (bounds.length === 1) {
-      // Single point - set zoom level
-      map.setView(bounds[0] as L.LatLngTuple, props.singleSchool ? 12 : 10)
-    } else {
-      map.fitBounds(L.latLngBounds(bounds as L.LatLngTuple[]), { padding: [50, 50], maxZoom: 15 })
+    try {
+      if (bounds.length === 1) {
+        // Single point - set zoom level
+        map.setView(bounds[0] as L.LatLngTuple, props.singleSchool ? 12 : 10)
+      } else {
+        const latLngBounds = L.latLngBounds(bounds as L.LatLngTuple[])
+        // Validate bounds are valid (not infinite or NaN)
+        if (latLngBounds.isValid()) {
+          map.fitBounds(latLngBounds, { padding: [50, 50], maxZoom: 15 })
+        } else {
+          console.warn('Invalid bounds calculated, using default view')
+          map.setView([39.8283, -98.5795], 4) // Center of USA
+        }
+      }
+    } catch (error) {
+      console.error('Error fitting bounds:', error)
+      map.setView([39.8283, -98.5795], 4) // Fallback to center of USA
     }
   }
 }

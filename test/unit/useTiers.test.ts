@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach } from 'vitest'
-import { useTiers } from '~/app/composables/useTiers'
-import type { School, TrustTier } from '~/types/database'
+import { useTiers } from '../../app/composables/useTiers'
+import type { School, TrustTier } from '../../types/database'
 
 describe('useTiers composable', () => {
   let tiers: ReturnType<typeof useTiers>

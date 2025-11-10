@@ -19,7 +19,7 @@
 
           <!-- Center: Navigation -->
           <nav class="hidden lg:flex items-center gap-1">
-            <UNavigationMenu :items="navItems" class="text-white" />
+            <UNavigationMenu :items="navItems" class="text-white navigation-menu" />
           </nav>
 
           <!-- Right: Actions -->
@@ -118,12 +118,12 @@
             <h3 class="text-white font-semibold mb-3">Quick Links</h3>
             <ul class="space-y-2 text-sm">
               <li>
-                <NuxtLink to="/" class="hover:opacity-80 transition-opacity text-white">
+                <NuxtLink to="/" class="hover:opacity-80 transition-opacity" style="color: white !important;">
                   Search Schools
                 </NuxtLink>
               </li>
               <li>
-                <NuxtLink to="/match" class="hover:opacity-80 transition-opacity text-white">
+                <NuxtLink to="/match" class="hover:opacity-80 transition-opacity" style="color: white !important;">
                   AI Matching
                 </NuxtLink>
               </li>
@@ -135,17 +135,17 @@
             <h3 class="text-white font-semibold mb-3">Resources</h3>
             <ul class="space-y-2 text-sm">
               <li>
-                <a href="#" class="hover:opacity-80 transition-opacity text-white">
+                <a href="#" class="hover:opacity-80 transition-opacity" style="color: white !important;">
                   About Us
                 </a>
               </li>
               <li>
-                <a href="#" class="hover:opacity-80 transition-opacity text-white">
+                <a href="#" class="hover:opacity-80 transition-opacity" style="color: white !important;">
                   Contact
                 </a>
               </li>
               <li>
-                <a href="#" class="hover:opacity-80 transition-opacity text-white">
+                <a href="#" class="hover:opacity-80 transition-opacity" style="color: white !important;">
                   Privacy Policy
                 </a>
               </li>
@@ -283,23 +283,76 @@ header :deep([role="navigation"] button[aria-current="page"]) {
 }
 
 /* Fix for UNavigationMenu - ensure text is visible in all contexts */
+/* Default: dark text for navigation items (for dropdowns/menus with white bg) */
 :deep([data-reka-collection-item]),
 :deep([data-reka-collection-item] a),
-:deep([data-reka-collection-item] span) {
+:deep([data-reka-collection-item] span),
+:deep([data-reka-collection-item] *) {
   color: #004E89 !important;
 }
 
-/* In header context, navigation should be white */
+/* In header context, navigation should be white - use very specific selectors */
 header :deep([data-reka-collection-item]),
 header :deep([data-reka-collection-item] a),
-header :deep([data-reka-collection-item] span) {
+header :deep([data-reka-collection-item] span),
+header :deep([data-reka-collection-item] *),
+header nav :deep([data-reka-collection-item]),
+header nav :deep([data-reka-collection-item] a),
+header nav :deep([data-reka-collection-item] span),
+header nav :deep([data-reka-collection-item] *) {
   color: white !important;
 }
 
-/* Ensure navigation links in header are always white */
+/* Ensure navigation links in header are always white - multiple selector patterns */
 header nav :deep(a),
-header nav :deep([data-reka-collection-item] a) {
+header nav :deep([data-reka-collection-item] a),
+header :deep(nav a),
+header :deep(nav [data-reka-collection-item] a),
+header[style*="background-color: #004E89"] :deep([data-reka-collection-item] a),
+header[style*="background-color: #004E89"] nav :deep(a) {
   color: white !important;
+}
+
+/* Simple direct fix - target all links in navigation menu - default white */
+.navigation-menu :deep(a),
+.navigation-menu :deep([data-reka-collection-item] a),
+header .navigation-menu :deep(a),
+header .navigation-menu :deep([data-reka-collection-item] a),
+header .navigation-menu :deep([data-reka-collection-item] span),
+header .navigation-menu :deep([data-reka-collection-item] *) {
+  color: white !important;
+}
+
+/* CRITICAL FIX: When navigation item has white/light background (active state), make text dark */
+/* This must come AFTER the white text rules and be more specific */
+header nav :deep([data-reka-collection-item][data-active]),
+header nav :deep([data-reka-collection-item][data-active] a),
+header nav :deep([data-reka-collection-item][data-active] span),
+header nav :deep([data-reka-collection-item][data-active] *),
+header nav :deep([data-reka-collection-item][aria-current="page"]),
+header nav :deep([data-reka-collection-item][aria-current="page"] a),
+header nav :deep([data-reka-collection-item][aria-current="page"] span),
+header nav :deep([data-reka-collection-item][aria-current="page"] *),
+header .navigation-menu :deep([data-reka-collection-item][data-active]),
+header .navigation-menu :deep([data-reka-collection-item][data-active] a),
+header .navigation-menu :deep([data-reka-collection-item][data-active] span),
+header .navigation-menu :deep([data-reka-collection-item][data-active] *) {
+  color: #004E89 !important;
+}
+
+/* Also target any element with white background in header nav */
+header nav :deep([style*="background"]),
+header nav :deep([class*="bg-white"]),
+header nav :deep([class*="bg-gray-50"]),
+header nav :deep([class*="bg-gray-100"]) {
+  color: #004E89 !important;
+}
+
+header nav :deep([style*="background"] a),
+header nav :deep([style*="background"] span),
+header nav :deep([class*="bg-white"] a),
+header nav :deep([class*="bg-white"] span) {
+  color: #004E89 !important;
 }
 </style>
 

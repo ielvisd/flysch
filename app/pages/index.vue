@@ -5,7 +5,8 @@
       <div class="grid grid-cols-1 lg:grid-cols-4 gap-4 md:gap-6">
         <!-- Filters Panel -->
         <div class="lg:col-span-1">
-          <UCard variant="outline" class="bg-white" style="border: 2px solid rgba(0, 78, 137, 0.4); box-shadow: 0 4px 6px rgba(0, 78, 137, 0.1);">
+          <!-- Desktop: Always visible filters -->
+          <UCard variant="outline" class="bg-white hidden lg:block" style="border: 2px solid rgba(0, 78, 137, 0.4); box-shadow: 0 4px 6px rgba(0, 78, 137, 0.1);">
             <template #header>
               <div class="flex items-center justify-between !py-2">
                 <div class="flex items-center gap-2">
@@ -36,7 +37,7 @@
                   @input="debouncedSearch"
                   class="min-h-[44px] w-full touch-manipulation"
                   style="border: 3px solid #1A659E; background-color: rgba(239, 239, 208, 0.3); border-radius: 0.5rem;"
-                  :ui="{ base: 'focus:border-[#004E89] focus:ring-2 focus:ring-[#1A659E] focus:ring-opacity-30 rounded-lg w-full' }"
+                  :ui="{ base: 'focus:border-[#004E89] focus:ring-2 focus:ring-[#1A659E] focus:ring-opacity-30 rounded-lg w-full placeholder:text-gray-600' }"
                   aria-label="Search flight schools by name"
                 />
               </div>
@@ -50,7 +51,190 @@
                   variant="outline"
                   class="mb-2 min-h-[44px] w-full"
                   style="border: 3px solid #1A659E; background-color: rgba(239, 239, 208, 0.3); border-radius: 0.5rem;"
-                  :ui="{ base: 'focus:border-[#004E89] focus:ring-2 focus:ring-[#1A659E] focus:ring-opacity-30 rounded-lg w-full' }"
+                  :ui="{ base: 'focus:border-[#004E89] focus:ring-2 focus:ring-[#1A659E] focus:ring-opacity-30 rounded-lg w-full placeholder:text-gray-600' }"
+                />
+                <div class="flex items-center gap-2 mb-2">
+                  <UButton 
+                    size="md" 
+                    variant="solid"
+                    leading-icon="i-heroicons-map-pin"
+                    @click="detectLocation"
+                    :loading="detectingLocation"
+                    class="min-h-[44px] w-full touch-manipulation"
+                    style="background-color: #1A659E; color: white; border: 2px solid #004E89;"
+                  >
+                    Use My Location
+                  </UButton>
+                </div>
+                <div v-if="filters.location">
+                  <label class="block text-xs text-gray-500 mb-1">Radius: {{ filters.location.radius }} km</label>
+                  <input 
+                    v-model.number="filters.location.radius"
+                    type="range"
+                    min="10"
+                    max="500"
+                    step="10"
+                    class="w-full"
+                    @input="applyFilters"
+                  />
+                </div>
+              </div>
+
+              <!-- Programs -->
+              <div>
+                <label class="block text-sm font-medium mb-2 flex items-center gap-1" style="color: #004E89; font-weight: 600;">
+                  🎓 Programs
+                </label>
+                <div class="grid grid-cols-2 gap-2">
+                  <UCheckbox 
+                    v-for="program in programOptions"
+                    :key="program"
+                    :model-value="selectedPrograms.includes(program)"
+                    :value="program"
+                    :label="program"
+                    :ui="{ 
+                      label: 'text-gray-900 font-medium text-sm',
+                      wrapper: 'flex items-center',
+                      base: 'h-4 w-4 rounded border-2 border-gray-300 focus:ring-2 focus:ring-primary-500'
+                    }"
+                    @update:model-value="(val) => { if (val) selectedPrograms.push(program); else selectedPrograms = selectedPrograms.filter(p => p !== program); applyFilters(); }"
+                  />
+                </div>
+              </div>
+
+              <!-- Budget -->
+              <div>
+                <label class="block text-sm font-medium mb-2 flex items-center gap-1" style="color: #004E89; font-weight: 600;">
+                  💰 Budget Range
+                </label>
+                <USelect 
+                  v-model="budgetRange"
+                  :options="budgetOptions"
+                  @change="applyFilters"
+                />
+              </div>
+
+              <!-- Training Type -->
+              <div>
+                <label class="block text-sm font-medium mb-2 flex items-center gap-1" style="color: #004E89; font-weight: 600;">
+                  ✈️ Training Type
+                </label>
+                <div class="space-y-2">
+                  <UCheckbox 
+                    v-for="trainingType in ['Part 61', 'Part 141']"
+                    :key="trainingType"
+                    :model-value="selectedTrainingTypes.includes(trainingType)"
+                    :value="trainingType"
+                    :label="trainingType"
+                    :ui="{ 
+                      label: 'text-gray-900 font-medium text-sm',
+                      wrapper: 'flex items-center'
+                    }"
+                    @update:model-value="(val) => { if (val) selectedTrainingTypes.push(trainingType); else selectedTrainingTypes = selectedTrainingTypes.filter(t => t !== trainingType); applyFilters(); }"
+                  />
+                </div>
+              </div>
+
+              <!-- Fleet Features -->
+              <div>
+                <label class="block text-sm font-medium mb-2 flex items-center gap-1" style="color: #004E89; font-weight: 600;">
+                  🛩️ Fleet Features
+                </label>
+                <div class="space-y-2">
+                  <UCheckbox 
+                    v-model="filters.hasSimulator"
+                    label="Simulator Available"
+                    :ui="{ 
+                      label: 'text-gray-900 font-medium text-sm',
+                      wrapper: 'flex items-center'
+                    }"
+                    @change="applyFilters"
+                  />
+                  <UCheckbox 
+                    v-model="filters.hasG1000"
+                    label="G1000 Equipped"
+                    :ui="{ 
+                      label: 'text-gray-900 font-medium text-sm',
+                      wrapper: 'flex items-center'
+                    }"
+                    @change="applyFilters"
+                  />
+                </div>
+              </div>
+
+              <!-- Trust Tier -->
+              <div>
+                <label class="block text-sm font-medium mb-2 flex items-center gap-1" style="color: #004E89; font-weight: 600;">
+                  🛡️ Trust Tier
+                </label>
+                <div class="grid grid-cols-2 gap-2">
+                  <UCheckbox 
+                    v-for="tier in trustTierOptions"
+                    :key="tier"
+                    :model-value="selectedTiers.includes(tier)"
+                    :value="tier"
+                    :label="tier"
+                    :ui="{ 
+                      label: 'text-gray-900 font-medium text-sm',
+                      wrapper: 'flex items-center'
+                    }"
+                    @update:model-value="(val) => { if (val) selectedTiers.push(tier); else selectedTiers = selectedTiers.filter(t => t !== tier); applyFilters(); }"
+                  />
+                </div>
+              </div>
+            </div>
+          </UCard>
+
+          <!-- Mobile: Filters -->
+          <UCard variant="outline" class="bg-white lg:hidden" style="border: 2px solid rgba(0, 78, 137, 0.4); box-shadow: 0 4px 6px rgba(0, 78, 137, 0.1);">
+            <template #header>
+              <div class="flex items-center justify-between !py-2">
+                <div class="flex items-center gap-2">
+                  <UBadge color="primary" variant="solid" size="sm" icon="i-heroicons-funnel" class="min-h-[44px] px-3 rounded-lg touch-manipulation" style="background-color: #004E89; color: white;">
+                    Filters
+                  </UBadge>
+                </div>
+                <UButton 
+                  size="sm" 
+                  variant="solid" 
+                  @click="clearFilters"
+                  class="min-h-[44px] px-3 rounded-lg touch-manipulation"
+                  style="background-color: #FF6B35; color: white;"
+                >
+                  Clear
+                </UButton>
+              </div>
+            </template>
+
+            <div class="space-y-4" style="margin-top: -1rem; padding-top: 0;">
+              <!-- Text Search -->
+              <div>
+                <UInput 
+                  v-model="filters.search"
+                  placeholder="Search school name..."
+                  icon="i-heroicons-magnifying-glass"
+                  variant="outline"
+                  @input="debouncedSearch"
+                  class="min-h-[44px] w-full touch-manipulation"
+                  style="border: 3px solid #1A659E; background-color: rgba(239, 239, 208, 0.3); border-radius: 0.5rem;"
+                  :ui="{ base: 'focus:border-[#004E89] focus:ring-2 focus:ring-[#1A659E] focus:ring-opacity-30 rounded-lg w-full placeholder:text-gray-600' }"
+                  aria-label="Search flight schools by name"
+                />
+              </div>
+
+              <!-- Location -->
+              <div>
+                <label class="block text-sm font-medium mb-2 flex items-center gap-1" style="color: #004E89; font-weight: 600;">
+                  📍 Location
+                </label>
+                <UInput 
+                  v-model="locationInput"
+                  placeholder="City or ZIP code"
+                  icon="i-heroicons-map-pin"
+                  variant="outline"
+                  class="mb-2 min-h-[44px] w-full"
+                  style="border: 3px solid #1A659E; background-color: rgba(239, 239, 208, 0.3); border-radius: 0.5rem;"
+                  :ui="{ base: 'focus:border-[#004E89] focus:ring-2 focus:ring-[#1A659E] focus:ring-opacity-30 rounded-lg w-full placeholder:text-gray-600' }"
                 />
                 <div class="flex items-center gap-2 mb-2">
                   <UButton 
@@ -203,7 +387,8 @@
               </template>
               <div style="min-height: 400px;">
                 <SchoolMap
-                  v-if="schools && schools.length > 0"
+                  v-if="!loading && schools && schools.length > 0"
+                  :key="`map-${schools.length}-${JSON.stringify(filters.location || {})}`"
                   :schools="schools"
                   :center="filters.location ? { lat: filters.location.lat, lng: filters.location.lng } : undefined"
                   :radius="filters.location?.radius || 100"
@@ -915,7 +1100,21 @@ const scrollToCard = (index: number) => {
 
 // Initial load
 onMounted(async () => {
-  await fetchSchools()
+  const fetched = await fetchSchools()
+  console.debug('Initial fetch completed:', {
+    count: fetched?.length || 0,
+    schoolsWithLocation: fetched?.filter((s: any) => s.location).length || 0,
+    sampleSchool: fetched?.[0] ? {
+      id: fetched[0].id,
+      name: fetched[0].name,
+      location: fetched[0].location,
+      locationType: typeof fetched[0].location
+    } : null
+  })
+  console.debug('Schools reactive value:', {
+    count: schools.value?.length || 0,
+    schools: schools.value
+  })
 })
 </script>
 

@@ -14,8 +14,8 @@ test.describe('Navigation', () => {
   test('should navigate to match page', async ({ page }) => {
     await page.goto('/')
     
-    // Click on AI Matching link
-    await page.getByRole('link', { name: /ai matching/i }).click()
+    // Click on AI Matching link in the navbar (first one, not footer)
+    await page.getByRole('navigation').getByRole('link', { name: /ai matching/i }).first().click()
     
     // Check if we're on the match page
     await expect(page).toHaveURL('/match')
