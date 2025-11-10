@@ -51,13 +51,38 @@ export default defineEventHandler(async (event) => {
       })
     }
 
+    console.log(`[Match API] Found ${schools.length} total schools`)
+    console.log(`[Match API] Filtering with: budget=$${inputs.maxBudget}, goals=[${inputs.trainingGoals.join(', ')}]`)
+
     // Filter candidate pool
     const candidates = filterCandidatePool(schools, inputs)
 
+    console.log(`[Match API] After filtering: ${candidates.length} candidates match criteria`)
+
     if (candidates.length === 0) {
+      // Provide more helpful error message
+      const reasons: string[] = []
+      const sampleSchool = schools[0]
+      if (sampleSchool) {
+        const schoolMinCost = Math.min(...(sampleSchool.programs?.map((p: Program) => p.minCost) || [Infinity]))
+        if (schoolMinCost > inputs.maxBudget) {
+          reasons.push(`Budget too low (minimum program cost: $${schoolMinCost.toLocaleString()})`)
+        }
+        const availablePrograms = sampleSchool.programs?.map((p: Program) => p.type) || []
+        const missingPrograms = inputs.trainingGoals.filter(g => !availablePrograms.includes(g))
+        if (missingPrograms.length > 0) {
+          reasons.push(`Some programs not available (looking for: ${inputs.trainingGoals.join(', ')}, available in sample: ${availablePrograms.join(', ')})`)
+        }
+      }
+      
       throw createError({
         statusCode: 404,
-        statusMessage: 'No schools match your criteria. Try adjusting your filters.'
+        statusMessage: `No schools match your criteria. Try adjusting your filters.${reasons.length > 0 ? ' ' + reasons.join('; ') : ''}`,
+        data: { 
+          totalSchools: schools.length,
+          budget: inputs.maxBudget,
+          trainingGoals: inputs.trainingGoals
+        }
       })
     }
 
@@ -85,6 +110,11 @@ export default defineEventHandler(async (event) => {
   } catch (err) {
     console.error('Match API error:', err)
     
+    // Preserve original status code if it's a createError
+    if (err && typeof err === 'object' && 'statusCode' in err) {
+      throw err
+    }
+    
     // If AI fails, return error to trigger fallback
     throw createError({
       statusCode: 500,
@@ -99,17 +129,18 @@ export default defineEventHandler(async (event) => {
  */
 function filterCandidatePool(schools: School[], inputs: MatchInputs): School[] {
   return schools.filter(school => {
-    // Budget constraint
+    // Budget constraint - at least one program must be within budget
     const schoolMinCost = Math.min(...(school.programs?.map((p: Program) => p.minCost) || [Infinity]))
     if (schoolMinCost > inputs.maxBudget) {
       return false
     }
 
-    // Program goals match
-    const hasRequiredPrograms = inputs.trainingGoals.every((goal: ProgramType) =>
+    // Program goals match - require at least ONE matching program (not all)
+    // This is more lenient since schools typically don't offer all program types
+    const hasMatchingPrograms = inputs.trainingGoals.some((goal: ProgramType) =>
       school.programs?.some((p: Program) => p.type === goal)
     )
-    if (!hasRequiredPrograms) {
+    if (!hasMatchingPrograms) {
       return false
     }
 
@@ -261,11 +292,12 @@ function ruleBasedRanking(
     const budgetScore = Math.max(0, 1 - Math.abs(inputs.maxBudget - avgProgramCost) / inputs.maxBudget)
     score += budgetScore * 40
 
-    // Program match (30%)
-    const hasAllPrograms = inputs.trainingGoals.every((goal: ProgramType) =>
+    // Program match (30%) - score based on how many goals match
+    const matchingPrograms = inputs.trainingGoals.filter((goal: ProgramType) =>
       school.programs?.some((p: Program) => p.type === goal)
     )
-    score += (hasAllPrograms ? 30 : 15)
+    const programMatchRatio = matchingPrograms.length / inputs.trainingGoals.length
+    score += programMatchRatio * 30
 
     // Location (15%)
     if (inputs.location && school.location) {

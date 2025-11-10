@@ -33,7 +33,8 @@
                 :color="tierBadge.color"
                 :icon="tierBadge.icon"
                 size="lg"
-                :variant="school.trust_tier === 'Premier' || school.trust_tier === 'Verified' ? 'solid' : 'subtle'"
+                variant="solid"
+                :style="tierBadgeStyle"
               >
                 {{ tierBadge.label }}
               </UBadge>
@@ -239,7 +240,8 @@
                   :color="tierBadge.color"
                   :icon="tierBadge.icon"
                   size="md"
-                  :variant="school.trust_tier === 'Premier' || school.trust_tier === 'Verified' ? 'solid' : 'subtle'"
+                  variant="solid"
+                  :style="tierBadgeStyle"
                   class="w-full justify-center py-2"
                 >
                   {{ tierBadge.label }}
@@ -290,44 +292,46 @@
               <div v-if="school.fsp_signals.fleetUtilization">
                 <div class="flex justify-between text-sm mb-1">
                   <span style="color: #6B7280;">Fleet Utilization</span>
-                  <span class="font-medium" style="color: #004E89;">{{ school.fsp_signals.fleetUtilization }}%</span>
                 </div>
                 <UProgress 
                   :model-value="school.fsp_signals.fleetUtilization" 
                   :max="100"
-                  color="primary"
-                  size="sm"
+                  :color="fleetUtilizationColor"
+                  size="md"
+                  status
                 />
               </div>
 
               <div v-if="school.fsp_signals.passRateFirstAttempt">
                 <div class="flex justify-between text-sm mb-1">
                   <span style="color: #6B7280;">Pass Rate (1st Attempt)</span>
-                  <span class="font-medium" style="color: #004E89;">{{ school.fsp_signals.passRateFirstAttempt }}%</span>
                 </div>
                 <UProgress 
                   :model-value="school.fsp_signals.passRateFirstAttempt" 
                   :max="100"
                   color="success"
-                  size="sm"
+                  size="md"
+                  status
                 />
               </div>
 
-              <div v-if="school.fsp_signals.studentSatisfaction">
+              <div v-if="school.fsp_signals?.studentSatisfaction">
                 <div class="flex justify-between text-sm mb-1">
                   <span style="color: #6B7280;">Student Satisfaction</span>
-                  <span class="font-medium" style="color: #004E89;">{{ school.fsp_signals.studentSatisfaction.toFixed(1) }}/5.0</span>
                 </div>
-                <div class="flex items-center gap-1">
-                  <UIcon 
-                    v-for="i in 5" 
-                    :key="i"
-                    name="i-heroicons-star-solid"
-                    :class="i <= school.fsp_signals.studentSatisfaction ? 'text-yellow-400' : ''"
-                    :style="i <= school.fsp_signals.studentSatisfaction ? '' : 'color: #D1D5DB;'"
-                    class="w-4 h-4"
-                  />
-                </div>
+                <UProgress 
+                  :model-value="studentSatisfactionPercent" 
+                  :max="100"
+                  color="warning"
+                  size="md"
+                  :get-value-text="(value, max) => studentSatisfactionText"
+                >
+                  <template #status="{ percent }">
+                    <span class="text-sm font-medium" style="color: #004E89;">
+                      {{ studentSatisfaction.toFixed(1) }}/5.0
+                    </span>
+                  </template>
+                </UProgress>
               </div>
 
               <div v-if="school.fsp_signals.avgTimeToComplete">
@@ -395,17 +399,74 @@ const loading = ref(true)
 // Computed
 const tierBadge = computed(() => {
   if (!school.value) return { label: 'Unverified' as TrustTier, color: 'neutral' as const, icon: 'i-heroicons-question-mark-circle' }
-  return getTierBadge(school.value.trust_tier)
+  return getTierBadge(school.value.trust_tier || 'Unverified')
+})
+
+const tierBadgeStyle = computed(() => {
+  const tier = school.value?.trust_tier || 'Unverified'
+  // Ensure badges are always visible with explicit styles in light mode
+  switch (tier) {
+    case 'Premier':
+      return {
+        backgroundColor: '#f59e0b', // Amber/orange background
+        color: 'white',
+        border: 'none'
+      }
+    case 'Verified':
+      return {
+        backgroundColor: '#059669', // Dark green background
+        color: 'white',
+        border: 'none'
+      }
+    case 'Community':
+      return {
+        backgroundColor: '#1A659E', // Primary blue background
+        color: 'white',
+        border: 'none'
+      }
+    case 'Unverified':
+      return {
+        backgroundColor: '#3b82f6', // Blue background
+        color: 'white',
+        border: 'none'
+      }
+    default:
+      return {
+        backgroundColor: '#3b82f6', // Default to blue
+        color: 'white',
+        border: 'none'
+      }
+  }
 })
 
 const tierDescription = computed(() => {
   if (!school.value) return ''
-  return getTierDescription(school.value.trust_tier)
+  return getTierDescription(school.value.trust_tier || 'Unverified')
 })
 
 const tierCriteria = computed(() => {
   if (!school.value) return []
-  return getTierCriteria(school.value.trust_tier)
+  return getTierCriteria(school.value.trust_tier || 'Unverified')
+})
+
+const fleetUtilizationColor = computed((): 'primary' | 'secondary' | 'success' | 'info' | 'warning' | 'error' | 'neutral' => {
+  if (!school.value?.fsp_signals?.fleetUtilization) return 'neutral'
+  const utilization = school.value.fsp_signals.fleetUtilization
+  if (utilization >= 75) return 'success'
+  if (utilization >= 60) return 'warning'
+  return 'error'
+})
+
+const studentSatisfaction = computed(() => {
+  return school.value?.fsp_signals?.studentSatisfaction || 0
+})
+
+const studentSatisfactionPercent = computed(() => {
+  return (studentSatisfaction.value / 5) * 100
+})
+
+const studentSatisfactionText = computed(() => {
+  return `${studentSatisfaction.value.toFixed(1)} out of 5.0`
 })
 
 const programAccordionItems = computed(() => {

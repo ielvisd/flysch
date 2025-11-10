@@ -544,12 +544,13 @@
 
               <template #tier-data="{ row }">
                 <UBadge 
-                  :color="getTierColor(row.original.trust_tier)"
-                  :variant="row.original.trust_tier === 'Premier' || row.original.trust_tier === 'Verified' ? 'solid' : 'subtle'"
+                  :color="getTierColor(row.original.trust_tier || 'Unverified')"
+                  variant="solid"
                   size="sm"
-                  :icon="getTierIcon(row.original.trust_tier)"
+                  :icon="getTierIcon(row.original.trust_tier || 'Unverified')"
+                  :style="getTierBadgeStyle(row.original.trust_tier || 'Unverified')"
                 >
-                  {{ row.original.trust_tier }}
+                  {{ row.original.trust_tier || 'Unverified' }}
                 </UBadge>
               </template>
 
@@ -628,6 +629,43 @@ useHead({
 const { fetchSchools, schools, loading, calculateDistance, parseLocation } = useSchools()
 const { getTierColor, getTierIcon } = useTiers()
 const { coords, error: geoError } = useGeolocation()
+
+// Helper function to get badge styles for table view
+const getTierBadgeStyle = (tier: string) => {
+  // Ensure badges are always visible with explicit styles in light mode
+  switch (tier) {
+    case 'Premier':
+      return {
+        backgroundColor: '#f59e0b', // Amber/orange background
+        color: 'white',
+        border: 'none'
+      }
+    case 'Verified':
+      return {
+        backgroundColor: '#059669', // Dark green background
+        color: 'white',
+        border: 'none'
+      }
+    case 'Community':
+      return {
+        backgroundColor: '#1A659E', // Primary blue background
+        color: 'white',
+        border: 'none'
+      }
+    case 'Unverified':
+      return {
+        backgroundColor: '#3b82f6', // Blue background
+        color: 'white',
+        border: 'none'
+      }
+    default:
+      return {
+        backgroundColor: '#3b82f6', // Default to blue
+        color: 'white',
+        border: 'none'
+      }
+  }
+}
 
 // State
 const filters = ref<SchoolFilters>({})

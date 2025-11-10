@@ -273,9 +273,15 @@ export const useSchools = () => {
           })
         }
         
+        // Ensure trust_tier always has a valid value
+        const trustTier = school.trust_tier && typeof school.trust_tier === 'string' && school.trust_tier.trim() !== ''
+          ? school.trust_tier
+          : 'Unverified'
+        
         return {
           ...school,
-          location
+          location,
+          trust_tier: trustTier
         }
       })
       

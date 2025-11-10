@@ -31,12 +31,13 @@
         
         <UBadge 
           :color="tierColor"
-          :variant="school.trust_tier === 'Premier' || school.trust_tier === 'Verified' ? 'solid' : 'subtle'"
+          variant="solid"
           size="sm"
           :icon="tierIcon"
           class="shrink-0"
+          :style="tierBadgeStyle"
         >
-          {{ school.trust_tier }}
+          {{ displayTier }}
         </UBadge>
       </div>
     </template>
@@ -104,20 +105,17 @@
         </div>
       </div>
 
-      <!-- FSP Signals -->
-      <div v-if="school.fsp_signals && school.fsp_signals.fleetUtilization" class="pt-2 border-t" style="border-color: #E5E7EB;">
-        <div class="flex items-center justify-between text-xs">
+      <!-- Fleet Utilization -->
+      <div v-if="school.fleet || school.fsp_signals?.fleetUtilization !== undefined" class="pt-2 border-t" style="border-color: #E5E7EB;">
+        <div class="flex items-center justify-between text-xs mb-1">
           <span style="color: #6B7280;">Fleet Utilization</span>
-          <span class="font-medium" style="color: #004E89;">
-            {{ school.fsp_signals.fleetUtilization }}%
-          </span>
         </div>
         <UProgress 
-          :model-value="school.fsp_signals.fleetUtilization" 
+          :model-value="fleetUtilizationValue" 
           :max="100"
-          color="primary"
+          :color="fleetUtilizationColor"
           size="xs"
-          class="mt-1"
+          status
         />
       </div>
     </div>
@@ -172,19 +170,66 @@ const isSwipeGesture = ref(false)
 // Computed properties
 type NuxtUIColor = 'primary' | 'secondary' | 'success' | 'info' | 'warning' | 'error' | 'neutral'
 
-const tierColor = computed((): NuxtUIColor => {
+const displayTier = computed(() => {
   const tier = props.school.trust_tier
+  // Handle null, undefined, empty string, or any falsy value
+  if (!tier || (typeof tier === 'string' && tier.trim() === '')) {
+    console.warn(`School ${props.school.name || props.school.id} has missing trust_tier, defaulting to Unverified`, { tier, school: props.school })
+    return 'Unverified'
+  }
+  return tier
+})
+
+const tierColor = computed((): NuxtUIColor => {
+  const tier = displayTier.value
   const colorMap: Record<string, NuxtUIColor> = {
     'Premier': 'warning',
     'Verified': 'success',
     'Community': 'primary',
-    'Unverified': 'neutral'
+    'Unverified': 'primary' // Use primary (blue) for better visibility in light mode
   }
-  return colorMap[tier] || 'neutral'
+  return colorMap[tier] || 'primary'
+})
+
+const tierBadgeStyle = computed(() => {
+  const tier = displayTier.value
+  // Ensure badges are always visible with explicit styles in light mode
+  switch (tier) {
+    case 'Premier':
+      return {
+        backgroundColor: '#f59e0b', // Amber/orange background
+        color: 'white',
+        border: 'none'
+      }
+    case 'Verified':
+      return {
+        backgroundColor: '#059669', // Dark green background
+        color: 'white',
+        border: 'none'
+      }
+    case 'Community':
+      return {
+        backgroundColor: '#1A659E', // Primary blue background
+        color: 'white',
+        border: 'none'
+      }
+    case 'Unverified':
+      return {
+        backgroundColor: '#3b82f6', // Blue background
+        color: 'white',
+        border: 'none'
+      }
+    default:
+      return {
+        backgroundColor: '#3b82f6', // Default to blue
+        color: 'white',
+        border: 'none'
+      }
+  }
 })
 
 const tierIcon = computed(() => {
-  const tier = props.school.trust_tier
+  const tier = displayTier.value
   const iconMap: Record<string, string> = {
     'Premier': 'i-heroicons-star',
     'Verified': 'i-heroicons-shield-check',
@@ -206,6 +251,18 @@ const costRange = computed(() => {
 
 const hasG1000 = computed(() => {
   return props.school.fleet?.aircraft?.some(a => a.hasG1000) || false
+})
+
+const fleetUtilizationValue = computed(() => {
+  return props.school.fsp_signals?.fleetUtilization ?? 0
+})
+
+const fleetUtilizationColor = computed((): NuxtUIColor => {
+  const utilization = fleetUtilizationValue.value
+  if (utilization >= 75) return 'success'
+  if (utilization >= 60) return 'warning'
+  if (utilization > 0) return 'error'
+  return 'neutral'
 })
 
 // Methods

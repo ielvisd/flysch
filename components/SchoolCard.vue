@@ -94,20 +94,17 @@
         </div>
       </div>
 
-      <!-- FSP Signals -->
-      <div v-if="school.fsp_signals && school.fsp_signals.fleetUtilization" class="pt-2 border-t" style="border-color: #E5E7EB;">
-        <div class="flex items-center justify-between text-xs">
+      <!-- Fleet Utilization -->
+      <div v-if="school.fleet || school.fsp_signals?.fleetUtilization !== undefined" class="pt-2 border-t" style="border-color: #E5E7EB;">
+        <div class="flex items-center justify-between text-xs mb-1">
           <span style="color: #6B7280;">Fleet Utilization</span>
-          <span class="font-medium" style="color: #054A91;">
-            {{ school.fsp_signals.fleetUtilization }}%
-          </span>
         </div>
         <UProgress 
-          :value="school.fsp_signals.fleetUtilization" 
+          :model-value="fleetUtilizationValue" 
           :max="100"
-          :color="school.fsp_signals.fleetUtilization > 75 ? 'success' : school.fsp_signals.fleetUtilization > 60 ? 'warning' : 'error'"
+          :color="fleetUtilizationColor"
           size="xs"
-          class="mt-1"
+          status
         />
       </div>
     </div>
@@ -180,6 +177,18 @@ const costRange = computed(() => {
 
 const hasG1000 = computed(() => {
   return props.school.fleet?.aircraft?.some(a => a.hasG1000) || false
+})
+
+const fleetUtilizationValue = computed(() => {
+  return props.school.fsp_signals?.fleetUtilization ?? 0
+})
+
+const fleetUtilizationColor = computed((): NuxtUIColor => {
+  const utilization = fleetUtilizationValue.value
+  if (utilization >= 75) return 'success'
+  if (utilization >= 60) return 'warning'
+  if (utilization > 0) return 'error'
+  return 'neutral'
 })
 
 // Methods
