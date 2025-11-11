@@ -165,15 +165,16 @@ a[role="button"] {
 
 /* SIMPLE FIX: Placeholder text - make it dark and readable */
 /* Target ALL inputs - no exceptions */
-::placeholder,
-input::placeholder,
-textarea::placeholder,
-input[type="text"]::placeholder,
-input[type="search"]::placeholder,
-input[type="email"]::placeholder,
-input[type="password"]::placeholder,
-*::placeholder {
-  color: #4b5563 !important;
+:not(.dark) ::placeholder,
+:not(.dark) input::placeholder,
+:not(.dark) textarea::placeholder,
+:not(.dark) input[type="text"]::placeholder,
+:not(.dark) input[type="search"]::placeholder,
+:not(.dark) input[type="email"]::placeholder,
+:not(.dark) input[type="password"]::placeholder,
+:not(.dark) input[type="number"]::placeholder,
+:not(.dark) *::placeholder {
+  color: #374151 !important; /* Darker gray for better readability */
   opacity: 1 !important;
 }
 
@@ -183,8 +184,9 @@ input[type="password"]::placeholder,
 :not(.dark) input[type="text"]::placeholder,
 :not(.dark) input[type="search"]::placeholder,
 :not(.dark) input[type="email"]::placeholder,
-:not(.dark) input[type="password"]::placeholder {
-  color: #4b5563 !important;
+:not(.dark) input[type="password"]::placeholder,
+:not(.dark) input[type="number"]::placeholder {
+  color: #374151 !important; /* Darker gray for better readability */
   opacity: 1 !important;
 }
 
@@ -194,7 +196,7 @@ input[type="password"]::placeholder,
 :not(.dark) input[class*="input"]::placeholder,
 :not(.dark) [class*="UInput"] input::placeholder,
 :not(.dark) [class*="u-input"] input::placeholder {
-  color: #4b5563 !important;
+  color: #374151 !important; /* Darker gray for better readability */
   opacity: 1 !important;
 }
 
@@ -202,14 +204,23 @@ input[type="password"]::placeholder,
 :not(.dark) [class*="base"] input::placeholder,
 :not(.dark) [class*="wrapper"] input::placeholder,
 :not(.dark) [class*="form"] input::placeholder {
-  color: #4b5563 !important;
+  color: #374151 !important; /* Darker gray for better readability */
   opacity: 1 !important;
 }
 
 /* Universal selector for any input placeholder in light mode */
 :not(.dark) * input::placeholder {
-  color: #4b5563 !important;
+  color: #374151 !important; /* Darker gray for better readability */
   opacity: 1 !important;
+}
+
+/* Header-specific placeholder styling - ensure readable even in header context */
+:not(.dark) header input::placeholder,
+:not(.dark) header [class*="input"] input::placeholder,
+:not(.dark) header textarea::placeholder {
+  color: #374151 !important; /* Dark gray for readability on white/light backgrounds */
+  opacity: 1 !important;
+  font-weight: 500 !important; /* Slightly bolder for better visibility */
 }
 
 /* Dark mode placeholder text */
@@ -237,6 +248,29 @@ header nav [data-reka-collection-item] {
   color: white !important;
 }
 
+/* CRITICAL: Dark mode override for header navigation - ensure white text on dark header */
+.dark header [data-reka-collection-item] a,
+.dark header [data-reka-collection-item] span,
+.dark header [data-reka-collection-item],
+.dark header nav [data-reka-collection-item] a,
+.dark header nav [data-reka-collection-item] span,
+.dark header nav [data-reka-collection-item],
+.dark header [data-reka-collection-item] button,
+.dark header nav [data-reka-collection-item] button,
+.dark header .navigation-menu [data-reka-collection-item] a,
+.dark header .navigation-menu [data-reka-collection-item] span,
+.dark header .navigation-menu [data-reka-collection-item] button {
+  color: white !important;
+  background-color: transparent !important;
+}
+
+/* Dark mode: ensure navigation buttons in header have white text */
+.dark header button[data-reka-collection-item],
+.dark header nav button,
+.dark header .navigation-menu button {
+  color: white !important;
+}
+
 /* Dark mode for UCheckbox labels specifically */
 .dark [class*="checkbox"] label,
 .dark [data-v-] label {
@@ -261,24 +295,7 @@ header nav [data-reka-collection-item] {
   color: #e2e8f0 !important;
 }
 
-/* Disable all progress bar animations */
-[class*="progress"],
-[class*="Progress"],
-.progress,
-.progress-bar,
-.progress-indicator {
-  transition: none !important;
-  animation: none !important;
-}
-
-[class*="progress"] *,
-[class*="Progress"] *,
-.progress *,
-.progress-bar *,
-.progress-indicator * {
-  transition: none !important;
-  animation: none !important;
-}
+/* Removed progress bar animation disabling rules to prevent interference with Nuxt UI Progress components */
 
 /* Dark mode for school cards and other components */
 .dark .school-card {
@@ -349,6 +366,32 @@ header nav [data-reka-collection-item] {
   .space-y-6 > * + * {
     margin-top: 1.25rem;
   }
+  
+  /* CRITICAL: Mobile placeholder text - ensure dark and readable on white/light backgrounds */
+  :not(.dark) input::placeholder,
+  :not(.dark) textarea::placeholder,
+  :not(.dark) input[type="text"]::placeholder,
+  :not(.dark) input[type="search"]::placeholder,
+  :not(.dark) input[type="email"]::placeholder,
+  :not(.dark) input[type="number"]::placeholder,
+  :not(.dark) * input::placeholder,
+  :not(.dark) * textarea::placeholder {
+    color: #374151 !important; /* Dark gray - more readable than #4b5563 */
+    opacity: 1 !important;
+    font-weight: 500 !important; /* Slightly bolder for better visibility */
+  }
+  
+  /* Target Nuxt UI inputs specifically on mobile */
+  :not(.dark) [class*="input"] input::placeholder,
+  :not(.dark) [class*="Input"] input::placeholder,
+  :not(.dark) [class*="UInput"] input::placeholder,
+  :not(.dark) [class*="u-input"] input::placeholder,
+  :not(.dark) header input::placeholder,
+  :not(.dark) header [class*="input"] input::placeholder {
+    color: #374151 !important;
+    opacity: 1 !important;
+    font-weight: 500 !important;
+  }
 }
 
 /* School card hover effects */
@@ -401,5 +444,37 @@ header nav [data-reka-collection-item] {
 .dark .skeleton {
   background: linear-gradient(90deg, #1e293b 25%, #334155 50%, #1e293b 75%);
   background-size: 200% 100%;
+}
+
+/* Checkbox checked state visibility in light mode */
+:not(.dark) [data-state="checked"] {
+  background-color: #004E89 !important;
+  border-color: #004E89 !important;
+}
+
+:not(.dark) [data-state="checked"] svg,
+:not(.dark) [data-state="checked"] [class*="icon"] {
+  color: white !important;
+  fill: white !important;
+}
+
+/* Ensure checkbox indicator is visible when checked in light mode */
+:not(.dark) [class*="checkbox"][data-state="checked"],
+:not(.dark) [class*="Checkbox"][data-state="checked"] {
+  background-color: #004E89 !important;
+  border-color: #004E89 !important;
+}
+
+:not(.dark) [class*="checkbox"][data-state="checked"] [class*="indicator"],
+:not(.dark) [class*="Checkbox"][data-state="checked"] [class*="indicator"] {
+  background-color: #004E89 !important;
+}
+
+:not(.dark) [class*="checkbox"][data-state="checked"] svg,
+:not(.dark) [class*="checkbox"][data-state="checked"] [class*="icon"],
+:not(.dark) [class*="Checkbox"][data-state="checked"] svg,
+:not(.dark) [class*="Checkbox"][data-state="checked"] [class*="icon"] {
+  color: white !important;
+  fill: white !important;
 }
 

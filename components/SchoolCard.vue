@@ -100,10 +100,9 @@
           <span style="color: #6B7280;">Fleet Utilization</span>
         </div>
         <UProgress 
-          :model-value="fleetUtilizationValue" 
+          :model-value="#FF6B35" 
           :max="100"
-          :color="fleetUtilizationColor"
-          size="xs"
+          size="sm"
           status
         />
       </div>
@@ -180,7 +179,12 @@ const hasG1000 = computed(() => {
 })
 
 const fleetUtilizationValue = computed(() => {
-  return props.school.fsp_signals?.fleetUtilization ?? 0
+  const value = props.school.fsp_signals?.fleetUtilization
+  // Ensure we always return a valid number, defaulting to 0
+  if (value === null || value === undefined || isNaN(value)) {
+    return 0
+  }
+  return Number(value)
 })
 
 const fleetUtilizationColor = computed((): NuxtUIColor => {

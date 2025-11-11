@@ -169,16 +169,25 @@ test.describe('Matching Wizard', () => {
       
       // Should show results or loading
       await page.waitForTimeout(3000)
-      const hasResults = await page.locator('text=/matches/i').isVisible() || 
-                        await page.locator('text=/school/i').isVisible() ||
-                        await page.locator('text=/debrief/i').isVisible()
+      // Use more specific selectors to avoid strict mode violations
+      const hasResults = await Promise.race([
+        page.getByText(/matches found/i).isVisible().catch(() => false),
+        page.getByText(/ranked schools/i).isVisible().catch(() => false),
+        page.getByText(/debrief/i).first().isVisible().catch(() => false),
+        page.getByRole('heading', { name: /your matches/i }).isVisible().catch(() => false),
+        page.locator('[data-testid="match-results"]').isVisible().catch(() => false)
+      ])
+      // At least one result indicator should be visible
       expect(hasResults).toBe(true)
     }
   })
 })
 
 test.describe('Matching Wizard - Mobile', () => {
-  test.use({ viewport: { width: 375, height: 667 } })
+  test.use({ 
+    viewport: { width: 375, height: 667 },
+    hasTouch: true
+  })
 
   test('should be mobile responsive', async ({ page }) => {
     await page.goto('/match')

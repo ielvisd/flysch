@@ -1,6 +1,6 @@
 <template>
-  <div class="min-h-screen bg-gray-50" style="padding-top: 80px;">
-    <div v-if="loading" class="max-w-7xl mx-auto px-4 py-8">
+  <div class="min-h-screen bg-gray-50 pt-6">
+    <div v-if="loading" class="max-w-7xl mx-auto px-4 pb-8">
       <USkeleton class="h-64 mb-6 rounded-lg" />
       <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
         <USkeleton class="h-96 rounded-lg" />
@@ -9,7 +9,7 @@
       </div>
     </div>
 
-    <div v-else-if="school" class="max-w-7xl mx-auto px-4 py-8">
+    <div v-else-if="school" class="max-w-7xl mx-auto px-4 pb-8">
       <!-- Hero Section -->
       <UCard variant="outline" class="mb-6 bg-white" style="border: 2px solid rgba(0, 78, 137, 0.4); box-shadow: 0 4px 6px rgba(0, 78, 137, 0.1);">
         <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -289,27 +289,27 @@
                 </div>
               </div>
 
-              <div v-if="school.fsp_signals.fleetUtilization">
+              <div v-if="school && school.fsp_signals?.fleetUtilization !== undefined">
                 <div class="flex justify-between text-sm mb-1">
                   <span style="color: #6B7280;">Fleet Utilization</span>
                 </div>
                 <UProgress 
-                  :model-value="school.fsp_signals.fleetUtilization" 
+                  :model-value="fleetUtilizationValue" 
                   :max="100"
-                  :color="fleetUtilizationColor"
+                  color="info"
                   size="md"
                   status
                 />
               </div>
 
-              <div v-if="school.fsp_signals.passRateFirstAttempt">
+              <div v-if="school && school.fsp_signals?.passRateFirstAttempt !== undefined">
                 <div class="flex justify-between text-sm mb-1">
                   <span style="color: #6B7280;">Pass Rate (1st Attempt)</span>
                 </div>
                 <UProgress 
-                  :model-value="school.fsp_signals.passRateFirstAttempt" 
+                  :model-value="passRateValue" 
                   :max="100"
-                  color="success"
+                  color="info"
                   size="md"
                   status
                 />
@@ -318,20 +318,36 @@
               <div v-if="school.fsp_signals?.studentSatisfaction">
                 <div class="flex justify-between text-sm mb-1">
                   <span style="color: #6B7280;">Student Satisfaction</span>
+                  <span class="font-medium" style="color: #004E89;">{{ studentSatisfaction.toFixed(1) }}/5.0</span>
                 </div>
-                <UProgress 
-                  :model-value="studentSatisfactionPercent" 
-                  :max="100"
-                  color="warning"
-                  size="md"
-                  :get-value-text="(value, max) => studentSatisfactionText"
-                >
-                  <template #status="{ percent }">
-                    <span class="text-sm font-medium" style="color: #004E89;">
-                      {{ studentSatisfaction.toFixed(1) }}/5.0
-                    </span>
-                  </template>
-                </UProgress>
+                <div class="flex items-center gap-1">
+                  <div 
+                    v-for="i in 5" 
+                    :key="i"
+                    class="relative w-5 h-5"
+                  >
+                    <!-- Gray background star -->
+                    <UIcon 
+                      name="i-heroicons-star-solid"
+                      class="absolute inset-0 w-5 h-5"
+                      style="color: #D1D5DB;"
+                    />
+                    <!-- Yellow filled star (full or partial) -->
+                    <div 
+                      class="absolute inset-0 overflow-hidden"
+                      :style="{
+                        width: i <= Math.floor(studentSatisfaction) ? '100%' : 
+                               i === Math.ceil(studentSatisfaction) && studentSatisfaction % 1 > 0 ? 
+                               `${(studentSatisfaction % 1) * 100}%` : '0%'
+                      }"
+                    >
+                      <UIcon 
+                        name="i-heroicons-star-solid"
+                        class="w-5 h-5 text-yellow-400"
+                      />
+                    </div>
+                  </div>
+                </div>
               </div>
 
               <div v-if="school.fsp_signals.avgTimeToComplete">
@@ -449,12 +465,20 @@ const tierCriteria = computed(() => {
   return getTierCriteria(school.value.trust_tier || 'Unverified')
 })
 
+const fleetUtilizationValue = computed(() => {
+  return school.value?.fsp_signals?.fleetUtilization ?? 0
+})
+
 const fleetUtilizationColor = computed((): 'primary' | 'secondary' | 'success' | 'info' | 'warning' | 'error' | 'neutral' => {
-  if (!school.value?.fsp_signals?.fleetUtilization) return 'neutral'
-  const utilization = school.value.fsp_signals.fleetUtilization
+  const utilization = fleetUtilizationValue.value
   if (utilization >= 75) return 'success'
   if (utilization >= 60) return 'warning'
-  return 'error'
+  if (utilization > 0) return 'error'
+  return 'neutral'
+})
+
+const passRateValue = computed(() => {
+  return school.value?.fsp_signals?.passRateFirstAttempt ?? 0
 })
 
 const studentSatisfaction = computed(() => {
@@ -589,6 +613,9 @@ useHead({
   ]
 })
 
+// Store unsubscribe function
+let unsubscribe: (() => void) | null = null
+
 // Load school data and set up real-time subscription
 onMounted(async () => {
   school.value = await fetchSchool(schoolId)
@@ -596,7 +623,7 @@ onMounted(async () => {
 
   if (school.value) {
     // Subscribe to real-time updates
-    const unsubscribe = subscribeToSchool(schoolId, (updatedSchool: School) => {
+    unsubscribe = subscribeToSchool(schoolId, (updatedSchool: School) => {
       school.value = updatedSchool
       toast.add({
         title: 'School Updated',
@@ -604,11 +631,13 @@ onMounted(async () => {
         color: 'primary'
       })
     })
+  }
+})
 
-    // Clean up subscription on unmount
-    onUnmounted(() => {
-      unsubscribe()
-    })
+// Clean up subscription on unmount
+onUnmounted(() => {
+  if (unsubscribe) {
+    unsubscribe()
   }
 })
 </script>

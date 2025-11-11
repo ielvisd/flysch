@@ -40,6 +40,18 @@ coverage
 playwright-report
 test-results
 .playwright
+.playwright-mcp/
+# Test run media files
+test-results/**/*.png
+test-results/**/*.jpg
+test-results/**/*.jpeg
+test-results/**/*.gif
+test-results/**/*.webp
+playwright-report/**/*.png
+playwright-report/**/*.jpg
+playwright-report/**/*.jpeg
+playwright-report/**/*.gif
+playwright-report/**/*.webp
 
 # TypeScript
 *.tsbuildinfo

@@ -113,8 +113,8 @@
         <UProgress 
           :model-value="fleetUtilizationValue" 
           :max="100"
-          :color="fleetUtilizationColor"
-          size="xs"
+          color="info"
+          size="sm"
           status
         />
       </div>

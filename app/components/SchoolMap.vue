@@ -4,8 +4,6 @@
 
 <script setup lang="ts">
 import type { School } from '~~/types/database'
-import L from 'leaflet'
-import 'leaflet/dist/leaflet.css'
 
 interface Props {
   schools?: School[]
@@ -29,23 +27,16 @@ const props = withDefaults(defineProps<Props>(), {
 })
 
 const mapContainer = ref<HTMLElement | null>(null)
-let map: L.Map | null = null
-let markers: L.Marker[] = []
-let radiusCircle: L.Circle | null = null
-let userMarker: L.Marker | null = null
-
-// Fix Leaflet default icon issue
-if (process.client) {
-  delete (L.Icon.Default.prototype as any)._getIconUrl
-  L.Icon.Default.mergeOptions({
-    iconRetinaUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-icon-2x.png',
-    iconUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-icon.png',
-    shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-shadow.png'
-  })
-}
+let map: any = null
+let markers: any[] = []
+let radiusCircle: any = null
+let userMarker: any = null
+let L: any = null
 
 // Create custom icon for schools
 const createSchoolIcon = (tier: string) => {
+  if (!L) return null
+  
   const colors: Record<string, string> = {
     'Premier': '#F59E0B',
     'Verified': '#10B981',
@@ -74,244 +65,6 @@ const createSchoolIcon = (tier: string) => {
     iconAnchor: [16, 16],
     popupAnchor: [0, -16]
   })
-}
-
-// Get effective center
-const effectiveCenter = computed(() => {
-  if (props.singleSchool) {
-    const location = parseLocation(props.singleSchool.location)
-    if (location) {
-      return { lat: location.lat, lng: location.lng }
-    }
-  }
-  return props.center
-})
-
-// Initialize map
-onMounted(() => {
-  if (!mapContainer.value || !process.client) {
-    console.debug('Map container not available or not on client')
-    return
-  }
-
-  const center = effectiveCenter.value
-  console.debug('Initializing map with center:', center, 'schools count:', props.schools?.length || 0)
-
-  // Initialize map
-  map = L.map(mapContainer.value, {
-    center: [center.lat, center.lng],
-    zoom: props.zoom,
-    zoomControl: true,
-    attributionControl: true
-  })
-
-  // Add tile layer
-  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
-    maxZoom: 19
-  }).addTo(map)
-
-  // Add user location marker if center is provided and showing radius
-  if (center && props.showRadius) {
-    userMarker = L.marker([center.lat, center.lng], {
-      icon: L.divIcon({
-        className: 'user-marker',
-        html: `
-          <div style="
-            width: 24px;
-            height: 24px;
-            background-color: #FF6B35;
-            border: 3px solid white;
-            border-radius: 50%;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.3);
-          "></div>
-        `,
-        iconSize: [24, 24],
-        iconAnchor: [12, 12]
-      })
-    }).addTo(map)
-    userMarker.bindPopup('<b>Your Location</b>').openPopup()
-
-    // Add radius circle
-    if (props.radius) {
-      radiusCircle = L.circle([center.lat, center.lng], {
-        radius: props.radius * 1000, // Convert km to meters
-        color: '#1A659E',
-        fillColor: '#1A659E',
-        fillOpacity: 0.1,
-        weight: 2,
-        dashArray: '5, 5'
-      }).addTo(map)
-    }
-  }
-
-  // Wait a tick to ensure map is fully initialized
-  nextTick(() => {
-    // Add school markers
-    updateMarkers()
-
-    // Fit bounds if schools are provided
-    if (props.schools && props.schools.length > 0 || props.singleSchool) {
-      fitBounds()
-    }
-    
-    console.debug('Map initialized with', props.schools?.length || 0, 'schools')
-  })
-})
-
-// Update markers when schools change
-watch(() => props.schools, (newSchools, oldSchools) => {
-  if (!map) {
-    console.debug('Map not initialized, skipping marker update on schools change')
-    return
-  }
-  
-  console.debug('Schools prop changed:', {
-    oldCount: oldSchools?.length || 0,
-    newCount: newSchools?.length || 0
-  })
-  
-  updateMarkers()
-  fitBounds()
-}, { deep: true, immediate: false })
-
-watch(() => props.singleSchool, (newSchool, oldSchool) => {
-  if (!map) {
-    console.debug('Map not initialized, skipping marker update on singleSchool change')
-    return
-  }
-  
-  console.debug('SingleSchool prop changed:', {
-    oldId: oldSchool?.id,
-    newId: newSchool?.id
-  })
-  
-  updateMarkers()
-  if (props.singleSchool) {
-    fitBounds()
-  }
-}, { deep: true })
-
-watch(() => [effectiveCenter.value, props.radius], () => {
-  if (map && props.showRadius) {
-    const center = effectiveCenter.value
-    // Update user marker
-    if (userMarker) {
-      userMarker.setLatLng([center.lat, center.lng])
-      map.setView([center.lat, center.lng], map.getZoom())
-    }
-
-    // Update radius circle
-    if (radiusCircle && props.radius) {
-      radiusCircle.setLatLng([center.lat, center.lng])
-      radiusCircle.setRadius(props.radius * 1000)
-    }
-  }
-})
-
-// Update markers
-const updateMarkers = () => {
-  if (!map) {
-    console.debug('Map not initialized, skipping marker update')
-    return
-  }
-
-  // Clear existing markers
-  markers.forEach(marker => map!.removeLayer(marker))
-  markers = []
-
-  const schoolsToShow = props.singleSchool ? [props.singleSchool] : props.schools
-
-  if (!schoolsToShow || schoolsToShow.length === 0) {
-    console.debug('No schools to display on map')
-    return
-  }
-
-  console.debug(`Updating markers for ${schoolsToShow.length} school(s)`)
-  console.debug('Schools data:', schoolsToShow.map(s => ({
-    id: s.id,
-    name: s.name,
-    location: s.location,
-    locationType: typeof s.location
-  })))
-
-  let markersCreated = 0
-  let markersSkipped = 0
-
-  schoolsToShow.forEach((school) => {
-    if (!school.location) {
-      console.debug(`School ${school.name || school.id} has no location data`)
-      markersSkipped++
-      return
-    }
-
-    const location = parseLocation(school.location)
-    if (!location) {
-      console.warn(`Failed to parse location for school ${school.name || school.id}:`, school.location)
-      markersSkipped++
-      return
-    }
-
-    // Validate coordinates are within valid ranges
-    if (location.lat < -90 || location.lat > 90 || location.lng < -180 || location.lng > 180) {
-      console.warn(`Invalid coordinates for school ${school.name || school.id}:`, location)
-      markersSkipped++
-      return
-    }
-
-    try {
-      const icon = createSchoolIcon(school.trust_tier || 'Unverified')
-      const marker = L.marker([location.lat, location.lng], { icon })
-        .addTo(map!)
-        .bindPopup(createPopupContent(school))
-
-      markers.push(marker)
-      markersCreated++
-    } catch (error) {
-      console.error(`Error creating marker for school ${school.name || school.id}:`, error)
-      markersSkipped++
-    }
-  })
-
-  console.debug(`Markers created: ${markersCreated}, skipped: ${markersSkipped}`)
-}
-
-// Create popup content
-const createPopupContent = (school: School): string => {
-  const costRange = school.programs && school.programs.length > 0
-    ? (() => {
-        const costs = school.programs.flatMap(p => [p.minCost, p.maxCost])
-        const min = Math.min(...costs)
-        const max = Math.max(...costs)
-        return `$${min.toLocaleString()} - $${max.toLocaleString()}`
-      })()
-    : 'N/A'
-
-  return `
-    <div style="min-width: 200px;">
-      <h3 style="font-weight: bold; margin-bottom: 8px; color: #004E89;">${school.name}</h3>
-      <p style="margin: 4px 0; color: #6B7280; font-size: 12px;">
-        📍 ${school.city}, ${school.state}
-      </p>
-      <p style="margin: 4px 0; color: #6B7280; font-size: 12px;">
-        💰 ${costRange}
-      </p>
-      <p style="margin: 4px 0; color: #6B7280; font-size: 12px;">
-        🛡️ ${school.trust_tier || 'Unverified'}
-      </p>
-      <a href="/schools/${school.id}" style="
-        display: inline-block;
-        margin-top: 8px;
-        padding: 4px 12px;
-        background-color: #FF6B35;
-        color: white;
-        text-decoration: none;
-        border-radius: 4px;
-        font-size: 12px;
-        font-weight: 500;
-      ">View Details</a>
-    </div>
-  `
 }
 
 /**
@@ -462,12 +215,312 @@ const parseLocation = (location: any): { lat: number; lng: number } | null => {
   return null
 }
 
-// Fit map bounds to show all markers
-const fitBounds = () => {
-  if (!map) return
+// Get effective center
+const effectiveCenter = computed(() => {
+  if (props.singleSchool) {
+    const location = parseLocation(props.singleSchool.location)
+    if (location) {
+      return { lat: location.lat, lng: location.lng }
+    }
+  }
+  return props.center
+})
+
+// Initialize map
+onMounted(async () => {
+  if (!mapContainer.value || !process.client) {
+    console.debug('Map container not available or not on client')
+    return
+  }
+
+  // Dynamically import Leaflet only on client side
+  try {
+    const leafletModule = await import('leaflet')
+    L = leafletModule.default
+    await import('leaflet/dist/leaflet.css')
+    
+    // Fix Leaflet default icon issue
+    delete (L.Icon.Default.prototype as any)._getIconUrl
+    L.Icon.Default.mergeOptions({
+      iconRetinaUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-icon-2x.png',
+      iconUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-icon.png',
+      shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-shadow.png'
+    })
+  } catch (error) {
+    console.error('Failed to load Leaflet:', error)
+    return
+  }
+
+  const center = effectiveCenter.value
+  console.debug('Initializing map with center:', center, 'schools count:', props.schools?.length || 0)
+
+  // Initialize map
+  map = L.map(mapContainer.value, {
+    center: [center.lat, center.lng],
+    zoom: props.zoom,
+    zoomControl: true,
+    attributionControl: true
+  })
+
+  // Add tile layer
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+    maxZoom: 19
+  }).addTo(map)
+
+  // Add user location marker if center is provided and showing radius
+  if (center && props.showRadius) {
+    userMarker = L.marker([center.lat, center.lng], {
+      icon: L.divIcon({
+        className: 'user-marker',
+        html: `
+          <div style="
+            width: 24px;
+            height: 24px;
+            background-color: #FF6B35;
+            border: 3px solid white;
+            border-radius: 50%;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+          "></div>
+        `,
+        iconSize: [24, 24],
+        iconAnchor: [12, 12]
+      })
+    }).addTo(map)
+    userMarker.bindPopup('<b>Your Location</b>').openPopup()
+
+    // Add radius circle
+    if (props.radius) {
+      radiusCircle = L.circle([center.lat, center.lng], {
+        radius: props.radius * 1000, // Convert km to meters
+        color: '#1A659E',
+        fillColor: '#1A659E',
+        fillOpacity: 0.1,
+        weight: 2,
+        dashArray: '5, 5'
+      }).addTo(map)
+    }
+  }
+
+  // Wait a tick to ensure map is fully initialized
+  nextTick(() => {
+    // Check if map container is still in DOM
+    if (!map || !map.getContainer() || !map.getContainer().parentElement) {
+      console.debug('Map container not ready, skipping initialization')
+      return
+    }
+    
+    // Add school markers
+    updateMarkers()
+
+    // Fit bounds if schools are provided
+    if ((props.schools && props.schools.length > 0) || props.singleSchool) {
+      // Use another nextTick to ensure markers are added
+      nextTick(() => {
+        if (map && map.getContainer() && map.getContainer().parentElement) {
+          fitBounds()
+        }
+      })
+    }
+    
+    console.debug('Map initialized with', props.schools?.length || 0, 'schools')
+  })
+})
+
+// Update markers when schools change
+watch(() => props.schools, (newSchools, oldSchools) => {
+  if (!map) {
+    console.debug('Map not initialized, skipping marker update on schools change')
+    return
+  }
+  
+  // Check if map container is still in DOM
+  if (!map.getContainer() || !map.getContainer().parentElement) {
+    console.debug('Map container not in DOM, skipping update')
+    return
+  }
+  
+  console.debug('Schools prop changed:', {
+    oldCount: oldSchools?.length || 0,
+    newCount: newSchools?.length || 0
+  })
+  
+  updateMarkers()
+  
+  // Only fit bounds if there are schools to show
+  if (newSchools && newSchools.length > 0) {
+    // Use nextTick to ensure map is ready after DOM updates
+    nextTick(() => {
+      if (map && map.getContainer() && map.getContainer().parentElement) {
+        fitBounds()
+      }
+    })
+  }
+}, { deep: true, immediate: false })
+
+watch(() => props.singleSchool, (newSchool, oldSchool) => {
+  if (!map) {
+    console.debug('Map not initialized, skipping marker update on singleSchool change')
+    return
+  }
+  
+  console.debug('SingleSchool prop changed:', {
+    oldId: oldSchool?.id,
+    newId: newSchool?.id
+  })
+  
+  updateMarkers()
+  if (props.singleSchool) {
+    fitBounds()
+  }
+}, { deep: true })
+
+watch(() => [effectiveCenter.value, props.radius], () => {
+  if (map && props.showRadius) {
+    const center = effectiveCenter.value
+    // Update user marker
+    if (userMarker) {
+      userMarker.setLatLng([center.lat, center.lng])
+      map.setView([center.lat, center.lng], map.getZoom())
+    }
+
+    // Update radius circle
+    if (radiusCircle && props.radius) {
+      radiusCircle.setLatLng([center.lat, center.lng])
+      radiusCircle.setRadius(props.radius * 1000)
+    }
+  }
+})
+
+// Update markers
+const updateMarkers = () => {
+  if (!map) {
+    console.debug('Map not initialized, skipping marker update')
+    return
+  }
+
+  // Clear existing markers
+  markers.forEach(marker => map!.removeLayer(marker))
+  markers = []
 
   const schoolsToShow = props.singleSchool ? [props.singleSchool] : props.schools
-  const bounds: L.LatLngExpression[] = []
+
+  if (!schoolsToShow || schoolsToShow.length === 0) {
+    console.debug('No schools to display on map')
+    return
+  }
+
+  console.debug(`Updating markers for ${schoolsToShow.length} school(s)`)
+  console.debug('Schools data:', schoolsToShow.map(s => ({
+    id: s.id,
+    name: s.name,
+    location: s.location,
+    locationType: typeof s.location
+  })))
+
+  let markersCreated = 0
+  let markersSkipped = 0
+
+  schoolsToShow.forEach((school) => {
+    if (!school.location) {
+      console.debug(`School ${school.name || school.id} has no location data`)
+      markersSkipped++
+      return
+    }
+
+    const location = parseLocation(school.location)
+    if (!location) {
+      console.warn(`Failed to parse location for school ${school.name || school.id}:`, school.location)
+      markersSkipped++
+      return
+    }
+
+    // Validate coordinates are within valid ranges
+    if (location.lat < -90 || location.lat > 90 || location.lng < -180 || location.lng > 180) {
+      console.warn(`Invalid coordinates for school ${school.name || school.id}:`, location)
+      markersSkipped++
+      return
+    }
+
+    try {
+      const icon = createSchoolIcon(school.trust_tier || 'Unverified')
+      if (!icon || !L) {
+        console.warn(`Cannot create marker - Leaflet not loaded for school ${school.name || school.id}`)
+        markersSkipped++
+        return
+      }
+      const marker = L.marker([location.lat, location.lng], { icon })
+        .addTo(map!)
+        .bindPopup(createPopupContent(school))
+
+      markers.push(marker)
+      markersCreated++
+    } catch (error) {
+      console.error(`Error creating marker for school ${school.name || school.id}:`, error)
+      markersSkipped++
+    }
+  })
+
+  console.debug(`Markers created: ${markersCreated}, skipped: ${markersSkipped}`)
+}
+
+// Create popup content
+const createPopupContent = (school: School): string => {
+  const costRange = school.programs && school.programs.length > 0
+    ? (() => {
+        const costs = school.programs.flatMap(p => [p.minCost, p.maxCost])
+        const min = Math.min(...costs)
+        const max = Math.max(...costs)
+        return `$${min.toLocaleString()} - $${max.toLocaleString()}`
+      })()
+    : 'N/A'
+
+  return `
+    <div style="min-width: 200px;">
+      <h3 style="font-weight: bold; margin-bottom: 8px; color: #004E89;">${school.name}</h3>
+      <p style="margin: 4px 0; color: #6B7280; font-size: 12px;">
+        📍 ${school.city}, ${school.state}
+      </p>
+      <p style="margin: 4px 0; color: #6B7280; font-size: 12px;">
+        💰 ${costRange}
+      </p>
+      <p style="margin: 4px 0; color: #6B7280; font-size: 12px;">
+        🛡️ ${school.trust_tier || 'Unverified'}
+      </p>
+      <a href="/schools/${school.id}" style="
+        display: inline-block;
+        margin-top: 8px;
+        padding: 4px 12px;
+        background-color: #FF6B35;
+        color: white;
+        text-decoration: none;
+        border-radius: 4px;
+        font-size: 12px;
+        font-weight: 500;
+      ">View Details</a>
+    </div>
+  `
+}
+
+// Fit map bounds to show all markers
+const fitBounds = () => {
+  if (!map || !L) return
+  
+  // Check if map container is still in DOM
+  const container = map.getContainer()
+  if (!container || !container.parentElement) {
+    console.debug('Map container not in DOM, skipping fitBounds')
+    return
+  }
+
+  const schoolsToShow = props.singleSchool ? [props.singleSchool] : props.schools
+  
+  // Early return if no schools to show
+  if (!schoolsToShow || schoolsToShow.length === 0) {
+    return
+  }
+  
+  const bounds: [number, number][] = []
 
   schoolsToShow.forEach((school) => {
     if (!school.location) return
@@ -477,7 +530,7 @@ const fitBounds = () => {
       if (isFinite(location.lat) && isFinite(location.lng) &&
           location.lat >= -90 && location.lat <= 90 &&
           location.lng >= -180 && location.lng <= 180) {
-        bounds.push([location.lat, location.lng] as L.LatLngTuple)
+        bounds.push([location.lat, location.lng])
       } else {
         console.warn(`Invalid coordinates for school ${school.name || school.id}:`, location)
       }
@@ -490,17 +543,22 @@ const fitBounds = () => {
     if (isFinite(center.lat) && isFinite(center.lng) &&
         center.lat >= -90 && center.lat <= 90 &&
         center.lng >= -180 && center.lng <= 180) {
-      bounds.push([center.lat, center.lng] as L.LatLngTuple)
+      bounds.push([center.lat, center.lng])
     }
   }
 
-  if (bounds.length > 0) {
+  if (bounds.length > 0 && L) {
     try {
+      // Double-check map is still valid before manipulating
+      if (!map.getContainer() || !map.getContainer().parentElement) {
+        return
+      }
+      
       if (bounds.length === 1) {
         // Single point - set zoom level
-        map.setView(bounds[0] as L.LatLngTuple, props.singleSchool ? 12 : 10)
+        map.setView(bounds[0] as any, props.singleSchool ? 12 : 10)
       } else {
-        const latLngBounds = L.latLngBounds(bounds as L.LatLngTuple[])
+        const latLngBounds = L.latLngBounds(bounds as any)
         // Validate bounds are valid (not infinite or NaN)
         if (latLngBounds.isValid()) {
           map.fitBounds(latLngBounds, { padding: [50, 50], maxZoom: 15 })
@@ -511,7 +569,10 @@ const fitBounds = () => {
       }
     } catch (error) {
       console.error('Error fitting bounds:', error)
-      map.setView([39.8283, -98.5795], 4) // Fallback to center of USA
+      // Only set view if map is still valid
+      if (map.getContainer() && map.getContainer().parentElement) {
+        map.setView([39.8283, -98.5795], 4) // Fallback to center of USA
+      }
     }
   }
 }

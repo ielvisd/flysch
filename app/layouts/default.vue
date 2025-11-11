@@ -323,6 +323,7 @@ header .navigation-menu :deep([data-reka-collection-item] *) {
   color: white !important;
 }
 
+
 /* CRITICAL FIX: When navigation item has white/light background (active state), make text dark */
 /* This must come AFTER the white text rules and be more specific */
 header nav :deep([data-reka-collection-item][data-active]),

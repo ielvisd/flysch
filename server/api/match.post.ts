@@ -29,12 +29,19 @@ export default defineEventHandler(async (event) => {
 
     const supabase = createClient(supabaseUrl, supabaseAnonKey)
     
+    // Query schools with location converted to text format for easier parsing
+    // Supabase returns PostGIS geography as a string, but we need to handle it properly
     let query = supabase
       .from('schools')
       .select('*')
 
     // Apply basic filters
     const { data: schools, error } = await query
+    
+    // Log first school's location format for debugging
+    if (schools && schools.length > 0) {
+      console.log(`[Match API] Sample location format:`, typeof schools[0].location, schools[0].location)
+    }
 
     if (error) {
       throw createError({
@@ -53,6 +60,12 @@ export default defineEventHandler(async (event) => {
 
     console.log(`[Match API] Found ${schools.length} total schools`)
     console.log(`[Match API] Filtering with: budget=$${inputs.maxBudget}, goals=[${inputs.trainingGoals.join(', ')}]`)
+    
+    // Log sample school data for debugging
+    if (schools.length > 0) {
+      const sample = schools[0]
+      console.log(`[Match API] Sample school: ${sample.name}, location: ${JSON.stringify(sample.location)}, programs: ${sample.programs?.length || 0}`)
+    }
 
     // Filter candidate pool
     const candidates = filterCandidatePool(schools, inputs)
@@ -60,29 +73,91 @@ export default defineEventHandler(async (event) => {
     console.log(`[Match API] After filtering: ${candidates.length} candidates match criteria`)
 
     if (candidates.length === 0) {
-      // Provide more helpful error message
+      // Provide comprehensive diagnostic information
       const reasons: string[] = []
-      const sampleSchool = schools[0]
-      if (sampleSchool) {
-        const schoolMinCost = Math.min(...(sampleSchool.programs?.map((p: Program) => p.minCost) || [Infinity]))
-        if (schoolMinCost > inputs.maxBudget) {
-          reasons.push(`Budget too low (minimum program cost: $${schoolMinCost.toLocaleString()})`)
+      const diagnostics: any = {
+        totalSchools: schools.length,
+        budget: inputs.maxBudget,
+        trainingGoals: inputs.trainingGoals,
+        location: inputs.location
+      }
+
+      // Analyze budget constraints
+      const allMinCosts = schools
+        .map(s => Math.min(...(s.programs?.map((p: Program) => p.minCost) || [Infinity])))
+        .filter(c => c !== Infinity)
+      const minBudgetNeeded = allMinCosts.length > 0 ? Math.min(...allMinCosts) : Infinity
+      const maxBudgetNeeded = allMinCosts.length > 0 ? Math.max(...allMinCosts) : 0
+      
+      if (minBudgetNeeded !== Infinity && inputs.maxBudget < minBudgetNeeded) {
+        reasons.push(`Budget too low. Minimum program cost in database: $${minBudgetNeeded.toLocaleString()}. Try increasing budget to at least $${minBudgetNeeded.toLocaleString()}.`)
+        diagnostics.minBudgetNeeded = minBudgetNeeded
+      }
+
+      // Analyze program availability
+      const allProgramTypes = new Set<string>()
+      schools.forEach(s => {
+        s.programs?.forEach((p: Program) => allProgramTypes.add(p.type))
+      })
+      const availablePrograms = Array.from(allProgramTypes)
+      const missingPrograms = inputs.trainingGoals.filter(g => !availablePrograms.includes(g))
+      
+      if (missingPrograms.length > 0) {
+        reasons.push(`Programs not available: ${missingPrograms.join(', ')}. Available programs: ${availablePrograms.join(', ')}.`)
+        diagnostics.availablePrograms = availablePrograms
+        diagnostics.missingPrograms = missingPrograms
+      }
+
+      // Analyze location constraints
+      if (inputs.location) {
+        const schoolsInRadius = schools.filter(school => {
+          if (!school.location) return false
+          const distance = calculateDistance(
+            inputs.location!.lat,
+            inputs.location!.lng,
+            school.location
+          )
+          return distance <= inputs.location!.radius
+        })
+        
+        if (schoolsInRadius.length === 0) {
+          reasons.push(`No schools within ${inputs.location.radius}km radius. Try increasing radius to 200-500km or use a different location.`)
+          diagnostics.schoolsInRadius = 0
+        } else {
+          diagnostics.schoolsInRadius = schoolsInRadius.length
         }
-        const availablePrograms = sampleSchool.programs?.map((p: Program) => p.type) || []
-        const missingPrograms = inputs.trainingGoals.filter(g => !availablePrograms.includes(g))
-        if (missingPrograms.length > 0) {
-          reasons.push(`Some programs not available (looking for: ${inputs.trainingGoals.join(', ')}, available in sample: ${availablePrograms.join(', ')})`)
-        }
+      }
+
+      // Count schools that pass each filter individually
+      const budgetMatches = schools.filter(s => {
+        const schoolMinCost = Math.min(...(s.programs?.map((p: Program) => p.minCost) || [Infinity]))
+        return schoolMinCost <= inputs.maxBudget
+      }).length
+
+      const programMatches = schools.filter(s => {
+        return inputs.trainingGoals.some((goal: ProgramType) =>
+          s.programs?.some((p: Program) => p.type === goal)
+        )
+      }).length
+
+      diagnostics.filterBreakdown = {
+        budgetMatches,
+        programMatches,
+        locationMatches: inputs.location ? schools.filter(school => {
+          if (!school.location) return false
+          const distance = calculateDistance(
+            inputs.location!.lat,
+            inputs.location!.lng,
+            school.location
+          )
+          return distance <= inputs.location!.radius
+        }).length : schools.length
       }
       
       throw createError({
         statusCode: 404,
-        statusMessage: `No schools match your criteria. Try adjusting your filters.${reasons.length > 0 ? ' ' + reasons.join('; ') : ''}`,
-        data: { 
-          totalSchools: schools.length,
-          budget: inputs.maxBudget,
-          trainingGoals: inputs.trainingGoals
-        }
+        statusMessage: `No schools match your criteria. ${reasons.length > 0 ? reasons.join(' ') : 'Try adjusting your filters.'}`,
+        data: diagnostics
       })
     }
 
@@ -146,11 +221,23 @@ function filterCandidatePool(schools: School[], inputs: MatchInputs): School[] {
 
     // Location constraint (if provided)
     if (inputs.location) {
+      if (!school.location) {
+        // If school has no location, skip it when location filter is active
+        return false
+      }
+      
       const distance = calculateDistance(
         inputs.location.lat,
         inputs.location.lng,
         school.location
       )
+      
+      // Log distance calculation for debugging
+      if (isNaN(distance) || distance === Infinity) {
+        console.warn(`[Match API] Invalid distance calculated for school ${school.name}, location: ${JSON.stringify(school.location)}`)
+        return false
+      }
+      
       if (distance > inputs.location.radius) {
         return false
       }
@@ -171,6 +258,8 @@ async function callAIMatching(
   
   if (!apiKey || apiKey === 'your_openai_api_key_here') {
     // If no API key, fall back to rule-based ranking
+    // This allows the app to still provide recommendations even without OpenAI
+    console.log('[Match API] No OpenAI API key provided, using rule-based ranking fallback')
     return ruleBasedRanking(candidates, inputs)
   }
 
@@ -343,32 +432,148 @@ Key factors in your decision should include: instructor availability for ${input
 }
 
 /**
+ * Parse EWKB (Extended Well-Known Binary) hex string from PostGIS
+ * Supabase returns PostGIS geography as EWKB hex strings
+ */
+function parseEWKB(hexString: string): { lat: number; lng: number } | null {
+  try {
+    // EWKB format for POINT with SRID 4326:
+    // Byte 0: Endianness (01 = little endian)
+    // Bytes 1-4: Geometry type (01000020 = Point with SRID)
+    // Bytes 5-8: SRID (E6100000 = 4326 in little endian)
+    // Bytes 9-16: X coordinate (longitude) as double
+    // Bytes 17-24: Y coordinate (latitude) as double
+    
+    if (!hexString || hexString.length < 50) {
+      return null
+    }
+    
+    // Extract coordinate hex strings (starting after SRID, which is 9 bytes = 18 hex chars)
+    const xHex = hexString.substring(18, 34) // Longitude (8 bytes = 16 hex chars)
+    const yHex = hexString.substring(34, 50) // Latitude (8 bytes = 16 hex chars)
+    
+    if (!xHex || !yHex || xHex.length !== 16 || yHex.length !== 16) {
+      return null
+    }
+    
+    // Convert hex to double (little endian)
+    const hexToDouble = (hex: string): number => {
+      const bytes = new Uint8Array(8)
+      for (let i = 0; i < 8; i++) {
+        bytes[i] = parseInt(hex.substring(i * 2, i * 2 + 2), 16)
+      }
+      const view = new DataView(bytes.buffer)
+      return view.getFloat64(0, true) // true = little endian
+    }
+    
+    const lng = hexToDouble(xHex) // X = longitude
+    const lat = hexToDouble(yHex) // Y = latitude
+    
+    // Validate coordinates
+    if (isNaN(lat) || isNaN(lng) || !isFinite(lat) || !isFinite(lng)) {
+      return null
+    }
+    
+    // Validate lat/lng ranges
+    if (lat < -90 || lat > 90 || lng < -180 || lng > 180) {
+      return null
+    }
+    
+    return { lat, lng }
+  } catch (error) {
+    console.warn('[Match API] Error parsing EWKB:', error, hexString.substring(0, 50))
+    return null
+  }
+}
+
+/**
+ * Transform location from various Supabase/PostGIS formats to {lat, lng}
+ */
+function transformLocation(location: any): { lat: number; lng: number } | null {
+  if (!location) {
+    return null
+  }
+
+  // Handle already normalized object format
+  if (typeof location === 'object' && 'lat' in location && 'lng' in location) {
+    const lat = Number(location.lat)
+    const lng = Number(location.lng)
+    if (!isNaN(lat) && !isNaN(lng) && isFinite(lat) && isFinite(lng)) {
+      return { lat, lng }
+    }
+    return null
+  }
+
+  // Handle GeoJSON format: { type: "Point", coordinates: [lng, lat] }
+  if (typeof location === 'object' && 'type' in location && location.type === 'Point' && 
+      Array.isArray(location.coordinates) && location.coordinates.length >= 2) {
+    const lng = Number(location.coordinates[0])
+    const lat = Number(location.coordinates[1])
+    if (!isNaN(lat) && !isNaN(lng) && isFinite(lat) && isFinite(lng)) {
+      return { lat, lng }
+    }
+    return null
+  }
+
+  // Handle PostGIS WKT format: "POINT(lng lat)" or "SRID=4326;POINT(lng lat)"
+  if (typeof location === 'string') {
+    // Check if it's EWKB hex format (starts with 01 and is long hex string)
+    if (location.match(/^01[0-9A-Fa-f]{40,}$/)) {
+      const coords = parseEWKB(location)
+      if (coords) {
+        return coords
+      }
+    }
+    
+    // Remove SRID prefix if present
+    let wktString = location.replace(/^SRID=\d+;/, '')
+    
+    // Match POINT(lng lat) format
+    const pointMatch = wktString.match(/POINT\s*\(\s*([-\d.]+)\s+([-\d.]+)\s*\)/i)
+    if (pointMatch) {
+      const lng = Number(pointMatch[1])
+      const lat = Number(pointMatch[2])
+      if (!isNaN(lat) && !isNaN(lng) && isFinite(lat) && isFinite(lng)) {
+        return { lat, lng }
+      }
+    }
+    
+    return null
+  }
+
+  // Handle array format: [lng, lat]
+  if (Array.isArray(location) && location.length >= 2) {
+    const lng = Number(location[0])
+    const lat = Number(location[1])
+    if (!isNaN(lat) && !isNaN(lng) && isFinite(lat) && isFinite(lng)) {
+      return { lat, lng }
+    }
+  }
+
+  return null
+}
+
+/**
  * Calculate distance between two points
  */
 function calculateDistance(lat1: number, lng1: number, location: any): number {
-  // Parse location if it's in PostGIS format
-  let lat2: number, lng2: number
+  // First transform the location to normalized format
+  const coords = transformLocation(location)
+  
+  if (!coords) {
+    console.warn(`[Match API] Failed to transform location: ${JSON.stringify(location)}`)
+    return Infinity
+  }
+  
+  const { lat: lat2, lng: lng2 } = coords
 
-  if (typeof location === 'string' && location.startsWith('POINT(')) {
-    const coords = location.match(/POINT\(([^)]+)\)/)
-    if (coords && coords[1]) {
-      const parts = coords[1].split(' ').map(Number)
-      if (parts.length >= 2 && parts[0] !== undefined && parts[1] !== undefined && !isNaN(parts[0]) && !isNaN(parts[1])) {
-        lng2 = parts[0]
-        lat2 = parts[1]
-      } else {
-        return Infinity
-      }
-    } else {
-      return Infinity
-    }
-  } else if (typeof location === 'object' && 'lat' in location) {
-    lat2 = location.lat
-    lng2 = location.lng
-  } else {
+  // Validate coordinates
+  if (isNaN(lat2) || isNaN(lng2) || lat2 < -90 || lat2 > 90 || lng2 < -180 || lng2 > 180) {
+    console.warn(`[Match API] Invalid coordinates: lat=${lat2}, lng=${lng2}`)
     return Infinity
   }
 
+  // Haversine formula for distance calculation
   const R = 6371 // Earth's radius in km
   const dLat = toRad(lat2 - lat1)
   const dLng = toRad(lng2 - lng1)

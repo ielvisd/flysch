@@ -190,8 +190,11 @@ export const useSchools = () => {
       filters.location || 
       filters.programs?.length || 
       filters.trustTiers?.length ||
+      filters.trainingType?.length ||
       filters.budgetMin || 
-      filters.budgetMax
+      filters.budgetMax ||
+      filters.hasSimulator ||
+      filters.hasG1000
     )
     
     if (!hasFilters && schoolsCache.value.length > 0) {
@@ -299,13 +302,26 @@ export const useSchools = () => {
         )
       }
 
+      // Apply training type filter
+      if (filters?.trainingType && filters.trainingType.length > 0) {
+        results = results.filter((school: School) => 
+          school.programs.some((p: Program) => 
+            p.trainingType && filters.trainingType?.some((tt) => p.trainingType.includes(tt))
+          )
+        )
+      }
+
       // Apply budget filter client-side (more accurate with program data)
       if (filters?.budgetMin || filters?.budgetMax) {
         results = results.filter((school: School) => {
           return school.programs.some((program: Program) => {
-            const min = filters.budgetMin || 0
-            const max = filters.budgetMax || Infinity
-            return program.minCost >= min && program.maxCost <= max
+            const filterMin = filters.budgetMin || 0
+            const filterMax = filters.budgetMax || Infinity
+            // Check if program cost range overlaps with filter range
+            // Program is in range if its min cost is within filter range OR its max cost is within filter range
+            return (program.minCost >= filterMin && program.minCost <= filterMax) ||
+                   (program.maxCost >= filterMin && program.maxCost <= filterMax) ||
+                   (program.minCost <= filterMin && program.maxCost >= filterMax)
           })
         })
       }

@@ -89,15 +89,14 @@
                   <UCheckbox 
                     v-for="program in programOptions"
                     :key="program"
-                    :model-value="selectedPrograms.includes(program)"
+                    :model-value="programCheckedMap.get(program) ?? false"
                     :value="program"
                     :label="program"
                     :ui="{ 
                       label: 'text-gray-900 font-medium text-sm',
-                      wrapper: 'flex items-center',
-                      base: 'h-4 w-4 rounded border-2 border-gray-300 focus:ring-2 focus:ring-primary-500'
+                      wrapper: 'flex items-center'
                     }"
-                    @update:model-value="(val) => { if (val) selectedPrograms.push(program); else selectedPrograms = selectedPrograms.filter(p => p !== program); applyFilters(); }"
+                    @update:model-value="(val) => toggleProgram(program, val)"
                   />
                 </div>
               </div>
@@ -109,8 +108,9 @@
                 </label>
                 <USelect 
                   v-model="budgetRange"
-                  :options="budgetOptions"
-                  @change="applyFilters"
+                  :items="budgetOptions"
+                  value-key="value"
+                  placeholder="Select budget range"
                 />
               </div>
 
@@ -123,14 +123,14 @@
                   <UCheckbox 
                     v-for="trainingType in ['Part 61', 'Part 141']"
                     :key="trainingType"
-                    :model-value="selectedTrainingTypes.includes(trainingType)"
+                    :model-value="trainingTypeCheckedMap.get(trainingType) ?? false"
                     :value="trainingType"
                     :label="trainingType"
                     :ui="{ 
                       label: 'text-gray-900 font-medium text-sm',
                       wrapper: 'flex items-center'
                     }"
-                    @update:model-value="(val) => { if (val) selectedTrainingTypes.push(trainingType); else selectedTrainingTypes = selectedTrainingTypes.filter(t => t !== trainingType); applyFilters(); }"
+                    @update:model-value="(val) => toggleTrainingType(trainingType, val)"
                   />
                 </div>
               </div>
@@ -148,7 +148,7 @@
                       label: 'text-gray-900 font-medium text-sm',
                       wrapper: 'flex items-center'
                     }"
-                    @change="applyFilters"
+                    @update:model-value="applyFilters"
                   />
                   <UCheckbox 
                     v-model="filters.hasG1000"
@@ -157,7 +157,7 @@
                       label: 'text-gray-900 font-medium text-sm',
                       wrapper: 'flex items-center'
                     }"
-                    @change="applyFilters"
+                    @update:model-value="applyFilters"
                   />
                 </div>
               </div>
@@ -171,14 +171,14 @@
                   <UCheckbox 
                     v-for="tier in trustTierOptions"
                     :key="tier"
-                    :model-value="selectedTiers.includes(tier)"
+                    :model-value="tierCheckedMap.get(tier) ?? false"
                     :value="tier"
                     :label="tier"
                     :ui="{ 
                       label: 'text-gray-900 font-medium text-sm',
                       wrapper: 'flex items-center'
                     }"
-                    @update:model-value="(val) => { if (val) selectedTiers.push(tier); else selectedTiers = selectedTiers.filter(t => t !== tier); applyFilters(); }"
+                    @update:model-value="(val) => toggleTier(tier, val)"
                   />
                 </div>
               </div>
@@ -272,15 +272,14 @@
                   <UCheckbox 
                     v-for="program in programOptions"
                     :key="program"
-                    :model-value="selectedPrograms.includes(program)"
+                    :model-value="programCheckedMap.get(program) ?? false"
                     :value="program"
                     :label="program"
                     :ui="{ 
                       label: 'text-gray-900 font-medium text-sm',
-                      wrapper: 'flex items-center',
-                      base: 'h-4 w-4 rounded border-2 border-gray-300 focus:ring-2 focus:ring-primary-500'
+                      wrapper: 'flex items-center'
                     }"
-                    @update:model-value="(val) => { if (val) selectedPrograms.push(program); else selectedPrograms = selectedPrograms.filter(p => p !== program); applyFilters(); }"
+                    @update:model-value="(val) => toggleProgram(program, val)"
                   />
                 </div>
               </div>
@@ -292,8 +291,9 @@
                 </label>
                 <USelect 
                   v-model="budgetRange"
-                  :options="budgetOptions"
-                  @change="applyFilters"
+                  :items="budgetOptions"
+                  value-key="value"
+                  placeholder="Select budget range"
                 />
               </div>
 
@@ -306,14 +306,14 @@
                   <UCheckbox 
                     v-for="trainingType in ['Part 61', 'Part 141']"
                     :key="trainingType"
-                    :model-value="selectedTrainingTypes.includes(trainingType)"
+                    :model-value="trainingTypeCheckedMap.get(trainingType) ?? false"
                     :value="trainingType"
                     :label="trainingType"
                     :ui="{ 
                       label: 'text-gray-900 font-medium text-sm',
                       wrapper: 'flex items-center'
                     }"
-                    @update:model-value="(val) => { if (val) selectedTrainingTypes.push(trainingType); else selectedTrainingTypes = selectedTrainingTypes.filter(t => t !== trainingType); applyFilters(); }"
+                    @update:model-value="(val) => toggleTrainingType(trainingType, val)"
                   />
                 </div>
               </div>
@@ -331,7 +331,7 @@
                       label: 'text-gray-900 font-medium text-sm',
                       wrapper: 'flex items-center'
                     }"
-                    @change="applyFilters"
+                    @update:model-value="applyFilters"
                   />
                   <UCheckbox 
                     v-model="filters.hasG1000"
@@ -340,7 +340,7 @@
                       label: 'text-gray-900 font-medium text-sm',
                       wrapper: 'flex items-center'
                     }"
-                    @change="applyFilters"
+                    @update:model-value="applyFilters"
                   />
                 </div>
               </div>
@@ -354,14 +354,14 @@
                   <UCheckbox 
                     v-for="tier in trustTierOptions"
                     :key="tier"
-                    :model-value="selectedTiers.includes(tier)"
+                    :model-value="tierCheckedMap.get(tier) ?? false"
                     :value="tier"
                     :label="tier"
                     :ui="{ 
                       label: 'text-gray-900 font-medium text-sm',
                       wrapper: 'flex items-center'
                     }"
-                    @update:model-value="(val) => { if (val) selectedTiers.push(tier); else selectedTiers = selectedTiers.filter(t => t !== tier); applyFilters(); }"
+                    @update:model-value="(val) => toggleTier(tier, val)"
                   />
                 </div>
               </div>
@@ -674,6 +674,9 @@ const selectedPrograms = ref<string[]>([])
 const selectedTiers = ref<string[]>([])
 const selectedTrainingTypes = ref<string[]>([])
 const budgetRange = ref('all')
+
+// Note: Using arrays directly in template - Vue auto-unwraps refs in templates
+
 const detectingLocation = ref(false)
 const currentPage = ref(1)
 const pageSize = 10
@@ -712,6 +715,31 @@ const currentSortLabelMobile = computed(() => {
 // Options
 const programOptions = ['PPL', 'IR', 'CPL', 'CFI', 'CFII', 'MEI', 'ATP']
 const trustTierOptions = ['Premier', 'Verified', 'Community', 'Unverified']
+
+// Use Maps to track checked state for better reactivity
+const tierCheckedMap = computed(() => {
+  const map = new Map<string, boolean>()
+  trustTierOptions.forEach(tier => {
+    map.set(tier, selectedTiers.value.includes(tier))
+  })
+  return map
+})
+
+const trainingTypeCheckedMap = computed(() => {
+  const map = new Map<string, boolean>()
+  ;['Part 61', 'Part 141'].forEach(type => {
+    map.set(type, selectedTrainingTypes.value.includes(type))
+  })
+  return map
+})
+
+const programCheckedMap = computed(() => {
+  const map = new Map<string, boolean>()
+  programOptions.forEach(program => {
+    map.set(program, selectedPrograms.value.includes(program))
+  })
+  return map
+})
 const budgetOptions = [
   { label: 'All Budgets', value: 'all' },
   { label: 'Under $10,000', value: 'under-10k' },
@@ -1010,23 +1038,14 @@ const paginatedSchools = computed(() => {
 })
 
 
-// Watch for program changes
-watch(selectedPrograms, (newPrograms) => {
-  filters.value.programs = newPrograms.length > 0 ? newPrograms as any : undefined
-})
+// Note: Program changes are handled directly in the checkbox @update:model-value handler
+// to ensure immediate filter application
 
-// Watch for tier changes
-watch(selectedTiers, (newTiers) => {
-  filters.value.trustTiers = newTiers.length > 0 ? newTiers as any : undefined
-})
-
-// Watch for training type changes
-watch(selectedTrainingTypes, (newTypes) => {
-  filters.value.trainingType = newTypes.length > 0 ? newTypes as any : undefined
-})
+// Note: Tier and training type changes are handled directly in their checkbox handlers
+// to ensure immediate filter application
 
 // Watch for budget changes
-watch(budgetRange, (newRange) => {
+watch(budgetRange, async (newRange) => {
   switch (newRange) {
     case 'under-10k':
       filters.value.budgetMin = 0
@@ -1048,6 +1067,8 @@ watch(budgetRange, (newRange) => {
       filters.value.budgetMin = undefined
       filters.value.budgetMax = undefined
   }
+  await nextTick()
+  await applyFilters()
 })
 
 // Sync table sort with dropdown sort when in table view
@@ -1083,6 +1104,61 @@ watch(tableSort, (newSort) => {
     sortOrder.value = sort.direction
   }
 })
+
+// Helper functions for checkbox handlers
+const toggleProgram = async (program: string, checked: boolean | "indeterminate") => {
+  const isChecked = checked === true
+  // Update array synchronously first
+  if (isChecked) {
+    if (!selectedPrograms.value.includes(program)) {
+      selectedPrograms.value = [...selectedPrograms.value, program]
+    }
+  } else {
+    selectedPrograms.value = selectedPrograms.value.filter((p: string) => p !== program)
+  }
+  // Update filters synchronously
+  filters.value.programs = selectedPrograms.value.length > 0 ? selectedPrograms.value as any : undefined
+  // Wait for reactivity to propagate
+  await nextTick()
+  // Then apply filters
+  await applyFilters()
+}
+
+const toggleTrainingType = async (trainingType: string, checked: boolean | "indeterminate") => {
+  const isChecked = checked === true
+  // Update array synchronously first
+  if (isChecked) {
+    if (!selectedTrainingTypes.value.includes(trainingType)) {
+      selectedTrainingTypes.value = [...selectedTrainingTypes.value, trainingType]
+    }
+  } else {
+    selectedTrainingTypes.value = selectedTrainingTypes.value.filter((t: string) => t !== trainingType)
+  }
+  // Update filters synchronously
+  filters.value.trainingType = selectedTrainingTypes.value.length > 0 ? selectedTrainingTypes.value as any : undefined
+  // Wait for reactivity to propagate
+  await nextTick()
+  // Then apply filters
+  await applyFilters()
+}
+
+const toggleTier = async (tier: string, checked: boolean | "indeterminate") => {
+  const isChecked = checked === true
+  // Update array synchronously first
+  if (isChecked) {
+    if (!selectedTiers.value.includes(tier)) {
+      selectedTiers.value = [...selectedTiers.value, tier]
+    }
+  } else {
+    selectedTiers.value = selectedTiers.value.filter((t: string) => t !== tier)
+  }
+  // Update filters synchronously
+  filters.value.trustTiers = selectedTiers.value.length > 0 ? selectedTiers.value as any : undefined
+  // Wait for reactivity to propagate
+  await nextTick()
+  // Then apply filters
+  await applyFilters()
+}
 
 // Methods
 const applyFilters = async () => {

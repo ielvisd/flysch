@@ -15,17 +15,17 @@
       </div>
 
       <!-- Progress Steps -->
-      <div class="mb-8">
-        <div class="flex items-center justify-between">
+      <div class="mb-8 flex justify-center items-center">
+        <div class="flex items-center gap-2 md:gap-4" style="max-width: 700px;">
           <div 
             v-for="step in steps" 
             :key="step.number"
-            class="flex-1"
+            class="flex flex-col items-center"
           >
             <div class="flex items-center">
               <div 
                 :class="[
-                  'w-10 h-10 md:w-12 md:h-12 rounded-full flex items-center justify-center font-semibold transition-all',
+                  'w-10 h-10 md:w-12 md:h-12 rounded-full flex items-center justify-center font-semibold transition-all flex-shrink-0',
                   currentStep >= step.number 
                     ? 'text-white' 
                     : 'text-white'
@@ -41,11 +41,11 @@
               </div>
               <div 
                 v-if="step.number < steps.length"
-                class="flex-1 h-1 mx-2 transition-all"
+                class="w-12 md:w-16 h-1 mx-2 transition-all"
                 :style="currentStep > step.number ? 'background-color: #004E89;' : 'background-color: #1A659E; opacity: 0.3;'"
               />
             </div>
-            <p class="text-xs mt-2" style="color: #6B7280;">{{ step.title }}</p>
+            <p class="text-xs mt-2 text-center whitespace-nowrap" style="color: #6B7280;">{{ step.title }}</p>
           </div>
         </div>
       </div>
@@ -73,7 +73,7 @@
                   : 'hover:border-opacity-60'
               ]"
               :style="formData.trainingGoals?.includes(goal.value) || false
-                ? 'border-color: #004E89; background-color: #1A659E; opacity: 0.2; color: #004E89;'
+                ? 'border-color: #004E89; background-color: rgba(26, 101, 158, 0.15); color: #004E89;'
                 : 'border-color: #1A659E; background-color: transparent; color: #004E89;'"
             >
               <UIcon :name="goal.icon" class="w-8 h-8 mb-2 mx-auto" />
@@ -117,6 +117,9 @@
               <span>$5,000</span>
               <span>$50,000</span>
             </div>
+            <p class="text-xs mt-2" style="color: #6B7280;">
+              💡 Tip: PPL/IR/CFI typically cost $5k-$15k. CPL costs $25k-$40k. Select programs that match your budget.
+            </p>
           </div>
 
           <div>
@@ -133,8 +136,8 @@
                     : 'hover:border-opacity-60'
                 ]"
                 :style="formData.scheduleFlexibility === schedule.value
-                  ? 'border-color: #054A91; background-color: #28AFFA; opacity: 0.2; color: #054A91;'
-                  : 'border-color: #28AFFA; background-color: transparent; color: #054A91;'"
+                  ? 'border-color: #004E89; background-color: rgba(26, 101, 158, 0.15); color: #004E89;'
+                  : 'border-color: #1A659E; background-color: transparent; color: #004E89;'"
               >
                 <p class="font-medium">{{ schedule.label }}</p>
               </div>
@@ -193,7 +196,7 @@
 
           <div>
             <label class="block text-sm font-medium mb-2">
-              Search Radius: {{ formData.location?.radius || 100 }} km ({{ Math.round((formData.location?.radius || 100) * 0.621371) }} miles)
+              Search Radius: {{ formData.location?.radius || 200 }} km ({{ Math.round((formData.location?.radius || 200) * 0.621371) }} miles)
             </label>
             <input 
               v-if="formData.location"
@@ -208,6 +211,9 @@
               <span>10 km</span>
               <span>500 km</span>
             </div>
+            <p class="text-xs mt-2" style="color: #6B7280;">
+              💡 Tip: Start with 200-300km radius for better results. You can narrow it down later.
+            </p>
           </div>
 
           <UCheckbox 
@@ -239,8 +245,8 @@
                     : 'hover:border-opacity-60'
                 ]"
                 :style="formData.preferredAircraft?.includes(aircraft)
-                  ? 'border-color: #054A91; background-color: #28AFFA; opacity: 0.2; color: #054A91;'
-                  : 'border-color: #28AFFA; background-color: transparent; color: #054A91;'"
+                  ? 'border-color: #004E89; background-color: rgba(26, 101, 158, 0.15); color: #004E89;'
+                  : 'border-color: #1A659E; background-color: transparent; color: #004E89;'"
               >
                 <p class="font-medium text-sm">{{ aircraft }}</p>
               </div>
@@ -261,8 +267,8 @@
                     : 'hover:border-opacity-60'
                 ]"
                 :style="formData.preferredTrainingType === type.value
-                  ? 'border-color: #054A91; background-color: #28AFFA; opacity: 0.2; color: #054A91;'
-                  : 'border-color: #28AFFA; background-color: transparent; color: #054A91;'"
+                  ? 'border-color: #004E89; background-color: rgba(26, 101, 158, 0.15); color: #004E89;'
+                  : 'border-color: #1A659E; background-color: transparent; color: #004E89;'"
               >
                 <p class="font-semibold mb-1">{{ type.label }}</p>
                 <p class="text-xs" style="color: #6B7280;">{{ type.description }}</p>
@@ -313,8 +319,19 @@
               aria-label="AI Match Analysis"
             >
               <template #description>
-                <div class="prose prose-sm dark:prose-invert mt-2">
-                  {{ matchResults.debrief }}
+                <div class="prose prose-sm dark:prose-invert mt-2 space-y-3">
+                  <template v-if="formattedDebrief && formattedDebrief.length > 0">
+                    <p 
+                      v-for="(paragraph, idx) in formattedDebrief" 
+                      :key="idx"
+                      class="text-gray-700 dark:text-gray-300 leading-relaxed"
+                    >
+                      {{ paragraph }}
+                    </p>
+                  </template>
+                  <p v-else class="text-gray-700 dark:text-gray-300 leading-relaxed">
+                    {{ matchResults?.debrief || 'No analysis available.' }}
+                  </p>
                 </div>
               </template>
             </UAlert>
@@ -343,8 +360,13 @@
                     {{ index + 1 }}
                   </div>
                   <div class="flex-1">
-                    <p class="font-semibold text-lg" style="color: #004E89;">School #{{ index + 1 }}</p>
+                    <p class="font-semibold text-lg" style="color: #004E89;">
+                      {{ schoolsData[schoolId]?.name || `School #${index + 1}` }}
+                    </p>
                     <p class="text-sm" style="color: #6B7280;">
+                      <span v-if="schoolsData[schoolId]?.city && schoolsData[schoolId]?.state">
+                        {{ schoolsData[schoolId].city }}, {{ schoolsData[schoolId].state }} • 
+                      </span>
                       Match Score: {{ matchResults.match_scores[schoolId] }}%
                     </p>
                   </div>
@@ -373,7 +395,7 @@
                 icon="i-heroicons-arrow-path"
                 @click="adjustPreferences"
                 variant="solid"
-                style="background-color: #FFF952; color: #054A91;"
+                style="background-color: #FF6B35; color: white;"
                 class="min-h-[44px] hover:opacity-90 transition-opacity font-semibold touch-manipulation"
               >
                 Adjust Preferences
@@ -404,7 +426,7 @@
           @click="nextStep"
           variant="solid"
           size="lg"
-          style="background-color: #FFF952; color: #054A91;"
+          style="background-color: #FF6B35; color: white;"
           class="hover:opacity-90 transition-opacity min-h-[44px] font-semibold touch-manipulation"
         >
           {{ currentStep === 4 ? 'Find Matches' : 'Continue' }}
@@ -415,8 +437,9 @@
 </template>
 
 <script setup lang="ts">
-import type { MatchInputs, ProgramType, TrainingType } from '~~/types/database'
+import type { MatchInputs, ProgramType, TrainingType, School } from '~~/types/database'
 import { useMatching } from '~~/app/composables/useMatching'
+import { useSchools } from '~~/app/composables/useSchools'
 
 // Meta
 useHead({
@@ -429,21 +452,23 @@ useHead({
 // Composables
 const { runMatching, matchResults, matchLoading, matchError, saveQuizProgress, loadQuizProgress, clearQuizProgress } = useMatching()
 const { coords } = useGeolocation()
+const { fetchSchool } = useSchools()
 
 // State
 const currentStep = ref(1)
 const showResults = ref(false)
 const detectingLocation = ref(false)
 const candidateCount = ref(0)
+const schoolsData = ref<Record<string, { name: string; city?: string; state?: string }>>({})
 
 const formData = ref<Partial<MatchInputs>>({
   trainingGoals: [],
-  maxBudget: 15000,
+  maxBudget: 20000, // Increased from 15000 to cover more programs (CPL starts at ~25k, but PPL/IR/CFI are lower)
   scheduleFlexibility: 'full-time',
   location: {
     lat: 40.7128,
     lng: -74.0060,
-    radius: 100
+    radius: 200 // Increased from 100km to 200km for better coverage
   },
   preferredAircraft: [],
   financing: false,
@@ -536,6 +561,49 @@ const canProceed = computed(() => {
   }
 })
 
+// Format debrief text into paragraphs
+const formattedDebrief = computed<string[]>(() => {
+  const results = matchResults.value
+  if (!results?.debrief) return []
+  
+  const text = results.debrief.trim()
+  if (!text) return []
+  
+  // First, split by double newlines (explicit paragraph breaks)
+  let paragraphs = text.split(/\n\n+/).map(p => p.trim()).filter(p => p.length > 0)
+  
+  // If no double newlines, try splitting by single newlines
+  if (paragraphs.length === 1) {
+    paragraphs = text.split(/\n/).map(p => p.trim()).filter(p => p.length > 0)
+  }
+  
+  // If still one paragraph, try splitting by sentence endings followed by capital letters
+  // This creates natural paragraph breaks at sentence boundaries
+  if (paragraphs.length === 1 && paragraphs[0] && paragraphs[0].length > 150) {
+    const firstParagraph = paragraphs[0]
+    const sentences = firstParagraph.match(/[^.!?]+[.!?]+(?:\s+|$)/g) || [firstParagraph]
+    // Group 2-3 sentences per paragraph for better readability
+    const grouped: string[] = []
+    let current = ''
+    for (const sentence of sentences) {
+      if (!sentence) continue
+      const trimmed = sentence.trim()
+      if (!trimmed) continue
+      
+      if (current && (current.match(/[.!?]/g) || []).length >= 2) {
+        grouped.push(current.trim())
+        current = trimmed
+      } else {
+        current += (current ? ' ' : '') + trimmed
+      }
+    }
+    if (current) grouped.push(current.trim())
+    paragraphs = grouped.length > 0 ? grouped : paragraphs
+  }
+  
+  return paragraphs.length > 0 ? paragraphs : [text]
+})
+
 // Methods
 const toggleGoal = (goal: ProgramType) => {
   if (!formData.value.trainingGoals) {
@@ -605,12 +673,12 @@ const restartQuiz = () => {
   showResults.value = false
   formData.value = {
     trainingGoals: [],
-    maxBudget: 15000,
+    maxBudget: 20000, // Increased from 15000 to cover more programs
     scheduleFlexibility: 'full-time',
     location: {
       lat: 40.7128,
       lng: -74.0060,
-      radius: 100
+      radius: 200 // Increased from 100km to 200km for better coverage
     },
     preferredAircraft: [],
     financing: false,
@@ -623,6 +691,31 @@ const adjustPreferences = () => {
   showResults.value = false
   currentStep.value = 1
 }
+
+// Fetch school data when match results are available
+watch(matchResults, async (newResults) => {
+  if (newResults && newResults.ranked_schools) {
+    // Fetch data for top 5 schools
+    const schoolIds = newResults.ranked_schools.slice(0, 5)
+    
+    for (const schoolId of schoolIds) {
+      if (!schoolsData.value[schoolId]) {
+        try {
+          const school = await fetchSchool(schoolId)
+          if (school) {
+            schoolsData.value[schoolId] = {
+              name: school.name,
+              city: school.city,
+              state: school.state
+            }
+          }
+        } catch (error) {
+          console.error(`Failed to fetch school ${schoolId}:`, error)
+        }
+      }
+    }
+  }
+}, { immediate: true })
 
 // Load saved progress on mount
 onMounted(() => {
