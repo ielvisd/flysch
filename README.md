@@ -170,7 +170,7 @@ In your Vercel project settings:
    - `OPENAI_API_KEY` or `GROK_API_KEY` - Your AI API key
 3. Make sure to add them for Production, Preview, and Development environments
 
-**Note**: The `vercel.json` file is configured for automatic deployment. The build command and output directory are already set.
+**Note**: The `vercel.json` file is configured for automatic deployment. The build command and output directory are already set..
 
 ## 📁 Project Structure
 
